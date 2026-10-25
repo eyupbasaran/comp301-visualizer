@@ -415,6 +415,95 @@ input {
   flex: 0 0 auto;
 }
 
+/* ---- lower panel tabs ---- */
+
+.tabs {
+  display: flex;
+  gap: 22px;
+}
+
+.tab {
+  padding: 0 0 2px;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.tab[aria-pressed='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+/* ---- AST ---- */
+
+.ast {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.ast li {
+  display: flex;
+  align-items: center;
+  white-space: pre;
+}
+
+.ast-guide {
+  color: var(--rule-muted);
+}
+
+.ast-node {
+  padding: 1px 6px;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.ast-node:hover:not(:disabled) {
+  border-color: var(--rule-muted);
+}
+
+.ast-node:disabled {
+  cursor: default;
+}
+
+.ast-node.open {
+  font-weight: 600;
+}
+
+.ast-node.current,
+.ast-node.current:hover {
+  font-weight: 600;
+  background: var(--mark);
+  border-color: var(--ink);
+}
+
+.ast-node.never {
+  color: var(--muted);
+  border: 1px dashed var(--rule-muted);
+}
+
+.ast-binder {
+  padding: 1px 6px;
+  font-style: italic;
+}
+
 /* ---- step bar ---- */
 
 .stepbar {
@@ -519,9 +608,17 @@ input {
     min-height: 0;
   }
 
-  .panel-trace {
+  /* The tabs stay put; only the list under them scrolls. */
+  .panel-lower {
     flex: 0 0 auto;
     max-height: 290px;
+    overflow: hidden;
+  }
+
+  .panel-lower > .trace,
+  .panel-lower > .ast {
+    min-height: 0;
     overflow-y: auto;
   }
+
 }

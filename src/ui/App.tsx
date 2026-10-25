@@ -3,6 +3,8 @@ import { runSource, type LanguageModule, type RunResult } from '../core/language
 import { stateAt } from '../core/state';
 import type { Outcome } from '../core/trace';
 import { LANGUAGES } from '../languages';
+import { layoutAst, stepOfNode } from './astLayout';
+import { AstTree } from './AstTree';
 import { Editor } from './Editor';
 import { EnvDiagram } from './EnvDiagram';
 import { layoutEnv } from './envLayout';
@@ -12,6 +14,13 @@ import { StepBox } from './StepBox';
 import { TracePanel } from './TracePanel';
 
 const START = { language: 'proc', example: 2 };
+
+// Views that share the lower right panel. The state panels (env, store, cont) are never tabs.
+type LowerView = 'trace' | 'ast';
+const LOWER_VIEWS: readonly { id: LowerView; title: string }[] = [
+  { id: 'trace', title: 'Trace' },
+  { id: 'ast', title: 'AST' },
+];
 
 function moduleById(id: string): LanguageModule {
   const module = LANGUAGES.find((entry) => entry.id === id)?.module;
@@ -31,12 +40,19 @@ export default function App() {
   const [source, setSource] = useState(language.examples[START.example].source);
   const [result, setResult] = useState<RunResult>(() => runSource(language, source));
   const [position, setPosition] = useState(0);
+  const [lower, setLower] = useState<LowerView>('trace');
 
   const trace = result.ok ? result.trace : null;
   const stale = result.ok && result.program.source !== source;
   const count = trace ? trace.steps.length : 0;
   const state = useMemo(() => (trace ? stateAt(trace, position) : null), [trace, position]);
   const diagram = useMemo(() => (trace ? layoutEnv(trace, position) : null), [trace, position]);
+  const views = LOWER_VIEWS.filter((v) => language.panels.includes(v.id));
+  const view = views.some((v) => v.id === lower) ? lower : (views[0]?.id ?? 'trace');
+  const ast = useMemo(
+    () => (trace && state && view === 'ast' ? layoutAst(trace.program, trace, state) : null),
+    [trace, state, view],
+  );
   const step = state?.step;
   const current = !stale && step && step.kind !== 'apply-cont' ? step.exp.span : null;
   const parseError = result.ok ? null : { from: result.error.from, to: result.error.to };
@@ -147,12 +163,28 @@ export default function App() {
               )}
             </div>
           )}
-          {trace && language.panels.includes('trace') && (
-            <div className="panel panel-trace">
+          {trace && views.length > 0 && (
+            <div className={`panel panel-lower view-${view}`}>
               <div className="panel-head">
-                <h2>Trace</h2>
+                <div className="tabs" role="group" aria-label="View">
+                  {views.map((v) => (
+                    <button key={v.id} type="button" className="tab" aria-pressed={view === v.id} onClick={() => setLower(v.id)}>
+                      {v.title}
+                    </button>
+                  ))}
+                </div>
+                {view === 'ast' && <span className="label">click a node to go to its step · dashed: never evaluated</span>}
               </div>
-              <TracePanel trace={trace} position={position} onPick={setPosition} />
+              {view === 'trace' && <TracePanel trace={trace} position={position} onPick={setPosition} />}
+              {view === 'ast' && ast && (
+                <AstTree
+                  rows={ast}
+                  onPick={(id) => {
+                    const p = stepOfNode(trace, id, position);
+                    if (p !== null) setPosition(p);
+                  }}
+                />
+              )}
             </div>
           )}
         </section>
