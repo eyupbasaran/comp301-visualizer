@@ -84,4 +84,4 @@ npm run typecheck
 npm run build
 ```
 
-Every merge to `main` runs the tests and deploys the site to GitHub Pages (`.github/workflows/deploy.yml`).
+Cloudflare Pages builds and publishes every merge to `main` (build command `npm test && npm run build`, output `dist`, Node version from `.node-version`).
