@@ -1,0 +1,527 @@
+/* The "book" look: paper, ink, thin rules, a highlighter for the current expression. */
+
+:root {
+  --paper: #fbfaf7;
+  --sheet: #ffffff;
+  --ink: #1c1b19;
+  --muted: #67645e;
+  --rule-muted: #8a867d;
+  --rule-faint: #d9d6ce;
+  --accent: #1f4e8c;
+  --mark: #ffe27a;
+  --mark-soft: #fff1b8;
+  --error: #a3261c;
+  --serif: 'Source Serif 4', Georgia, serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.mono {
+  font-family: var(--mono);
+}
+
+/* ---- top bar ---- */
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 28px;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.brand {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 600;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field label {
+  font-size: 15px;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.field select {
+  min-height: 36px;
+  padding: 4px 10px;
+  font-size: 15px;
+  background: var(--sheet);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+}
+
+.field select.mono {
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.run {
+  min-height: 44px;
+  padding: 0 22px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--paper);
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.run:hover {
+  background: #3a3834;
+}
+
+.summary {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+/* ---- workspace ---- */
+
+.workspace {
+  flex: 1 1 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.program {
+  flex: 1 1 440px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 28px;
+  border-right: 1px solid var(--ink);
+}
+
+.panels {
+  flex: 999 1 600px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panels.stale {
+  opacity: 0.45;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 28px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.panel:last-child {
+  border-bottom: 0;
+}
+
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 20px;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* ---- editor ---- */
+
+.editor .cm-editor {
+  font-family: var(--mono);
+  font-size: 16px;
+  background: var(--sheet);
+  border: 1px solid var(--ink);
+}
+
+.editor .cm-editor.cm-focused {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.editor .cm-scroller {
+  font-family: var(--mono);
+  line-height: 30px;
+  padding: 6px 0;
+}
+
+.editor .cm-gutters {
+  background: var(--sheet);
+  border-right: 0;
+  color: var(--muted);
+}
+
+.editor .cm-activeLine,
+.editor .cm-activeLineGutter {
+  background: transparent;
+}
+
+.tok-keyword {
+  font-weight: 600;
+}
+
+.tok-comment {
+  font-style: italic;
+  color: var(--muted);
+}
+
+.cm-current {
+  background: var(--mark);
+  padding: 2px 0;
+}
+
+.cm-parse-error {
+  text-decoration: underline wavy var(--error);
+  text-underline-offset: 4px;
+}
+
+/* ---- step box ---- */
+
+.stepbox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  background: var(--sheet);
+  border: 1px solid var(--ink);
+}
+
+.step-equation {
+  font-family: var(--mono);
+  font-size: 17px;
+  line-height: 26px;
+  overflow-wrap: anywhere;
+}
+
+.step-equation.error,
+.step-note.error {
+  color: var(--error);
+}
+
+.step-note {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.running {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.running-path {
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+/* ---- environment diagram ---- */
+
+.env-scroll {
+  overflow: auto;
+}
+
+.env-host {
+  position: relative;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.env-arrows {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.arrow {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.arrow.chain {
+  stroke: var(--accent);
+}
+
+.arrow.muted {
+  stroke: var(--rule-muted);
+}
+
+.head-chain {
+  fill: var(--accent);
+}
+
+.head-muted {
+  fill: var(--rule-muted);
+}
+
+.env-card {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 12px;
+  white-space: pre;
+  background: var(--paper);
+  border: 1px solid var(--rule-muted);
+  color: var(--muted);
+}
+
+.env-card .rho {
+  font-family: var(--serif);
+  font-size: 15px;
+}
+
+.env-card.chain,
+.env-card.current {
+  background: var(--sheet);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+}
+
+.env-card.current {
+  border-color: var(--accent);
+}
+
+.env-card.closure {
+  border-style: dashed;
+  border-width: 1px;
+}
+
+.env-card.closure.current {
+  border-color: var(--accent);
+}
+
+.env-card mark {
+  background: var(--mark);
+  color: var(--ink);
+  padding: 1px 3px;
+}
+
+.env-caption {
+  position: absolute;
+  font-family: var(--serif);
+  font-size: 14px;
+  font-style: italic;
+  line-height: 16px;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* ---- trace ---- */
+
+.trace {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.trace-row {
+  width: 100%;
+  display: flex;
+  gap: 16px;
+  padding: 4px 8px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.trace-row:hover {
+  background: #f1efe9;
+}
+
+.trace-row.current {
+  background: var(--mark-soft);
+  font-weight: 600;
+}
+
+.trace-num {
+  width: 32px;
+  flex: 0 0 auto;
+  text-align: right;
+  color: var(--muted);
+}
+
+.trace-row.current .trace-num {
+  color: var(--ink);
+}
+
+.trace-call {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trace-end {
+  font-family: var(--serif);
+  font-style: italic;
+}
+
+.trace-result {
+  flex: 0 0 auto;
+}
+
+/* ---- step bar ---- */
+
+.stepbar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 12px 28px;
+  background: var(--paper);
+  border-top: 1px solid var(--ink);
+}
+
+.icon-button {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.icon-button svg {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.8;
+}
+
+.icon-button:disabled {
+  cursor: default;
+  border-color: var(--rule-faint);
+}
+
+.icon-button:disabled svg {
+  stroke: var(--rule-muted);
+}
+
+.stepbar input[type='range'] {
+  flex: 1 1 320px;
+  accent-color: var(--ink);
+}
+
+.stepbar-count {
+  font-family: var(--mono);
+  font-size: 15px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+  .stepbar {
+    padding: 10px 16px;
+  }
+
+  .stepbar .label {
+    display: none;
+  }
+
+  .stepbar input[type='range'] {
+    flex-basis: 120px;
+  }
+
+  .topbar,
+  .program,
+  .panel {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* On a wide screen everything fits the window: each column scrolls on its own,
+   the trace keeps the lower part of the right column. Narrower, the page scrolls. */
+@media (min-width: 1100px) {
+  .app {
+    height: 100vh;
+  }
+
+  .workspace {
+    min-height: 0;
+    flex-wrap: nowrap;
+  }
+
+  .program,
+  .panels {
+    overflow-y: auto;
+  }
+
+  .panel-env {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .panel-env .env-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .panel-trace {
+    flex: 0 0 auto;
+    max-height: 290px;
+    overflow-y: auto;
+  }
+}
