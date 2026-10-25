@@ -13,3 +13,6 @@ dist/
 Thumbs.db
 .vscode/
 .idea/
+
+# Local Claude Code settings
+.claude/
