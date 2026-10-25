@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { runSource, type LanguageModule, type RunResult } from '../core/language';
 import { stateAt } from '../core/state';
 import type { Outcome } from '../core/trace';
@@ -12,10 +12,13 @@ import { EnvDiagram } from './EnvDiagram';
 import { layoutEnv } from './envLayout';
 import { bookValue } from './format';
 import { StepBar } from './StepBar';
+import { Splitter, useStoredSize } from './Splitter';
 import { StepBox } from './StepBox';
 import { TracePanel } from './TracePanel';
 
 const START = { language: 'proc', example: 2 };
+const PROGRAM_WIDTH = 460;
+const LOWER_HEIGHT = 290;
 
 // Views that share the lower right panel. The state panels (env, store, cont) are never tabs.
 type LowerView = 'trace' | 'ast' | 'contour';
@@ -46,6 +49,13 @@ export default function App() {
   const [lower, setLower] = useState<LowerView>('trace');
   // A variable picked in the contour view; it applies only at the step where it was picked.
   const [picked, setPicked] = useState<{ node: number; position: number } | null>(null);
+  // Sizes the viewer set with the drag handles.
+  const [programWidth, setProgramWidth] = useStoredSize('comp301.programWidth', PROGRAM_WIDTH);
+  const [lowerHeight, setLowerHeight] = useStoredSize('comp301.lowerHeight', LOWER_HEIGHT);
+  const workspace = useRef<HTMLElement>(null);
+  const panels = useRef<HTMLElement>(null);
+  const workspaceWidth = workspace.current?.clientWidth ?? 1440;
+  const panelsHeight = panels.current?.clientHeight ?? 760;
 
   const trace = result.ok ? result.trace : null;
   const stale = result.ok && result.program.source !== source;
@@ -91,7 +101,7 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target?.closest('.cm-editor, input, select, textarea')) return;
+      if (target?.closest('.cm-editor, input, select, textarea, [role=separator]')) return;
       const moves: Record<string, (p: number) => number> = {
         ArrowLeft: (p) => p - 1,
         ArrowRight: (p) => p + 1,
@@ -140,7 +150,11 @@ export default function App() {
         <div className="summary">{summary(result)}</div>
       </header>
 
-      <main className="workspace">
+      <main
+        className="workspace"
+        ref={workspace}
+        style={{ '--program-width': `${programWidth}px`, '--lower-height': `${lowerHeight}px` } as CSSProperties}
+      >
         <section className="program">
           <h2 className="label">Program</h2>
           <Editor
@@ -161,7 +175,19 @@ export default function App() {
           {trace && state && !stale && <StepBox trace={trace} state={state} />}
         </section>
 
-        <section className={stale ? 'panels stale' : 'panels'}>
+        <Splitter
+          orientation="vertical"
+          label="Program width"
+          value={programWidth}
+          min={280}
+          max={Math.max(280, workspaceWidth - 420)}
+          growKey="ArrowRight"
+          onChange={setProgramWidth}
+          toValue={(x) => x - (workspace.current?.getBoundingClientRect().left ?? 0)}
+          onReset={() => setProgramWidth(PROGRAM_WIDTH)}
+        />
+
+        <section className={stale ? 'panels stale' : 'panels'} ref={panels}>
           {language.panels.includes('env') && (
             <div className="panel panel-env">
               <div className="panel-head">
@@ -174,6 +200,19 @@ export default function App() {
                 <p className="step-note">{trace ? 'The run has ended.' : 'Fix the program to see its environment.'}</p>
               )}
             </div>
+          )}
+          {trace && views.length > 0 && language.panels.includes('env') && (
+            <Splitter
+              orientation="horizontal"
+              label="Height of the lower panel"
+              value={lowerHeight}
+              min={120}
+              max={Math.max(120, panelsHeight - 140)}
+              growKey="ArrowUp"
+              onChange={setLowerHeight}
+              toValue={(_, y) => (panels.current?.getBoundingClientRect().bottom ?? 0) - y}
+              onReset={() => setLowerHeight(LOWER_HEIGHT)}
+            />
           )}
           {trace && views.length > 0 && (
             <div className={`panel panel-lower view-${view}`}>

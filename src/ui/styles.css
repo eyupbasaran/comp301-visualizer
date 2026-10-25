@@ -595,6 +595,64 @@ input {
   max-width: 72ch;
 }
 
+/* ---- drag handles ---- */
+
+.splitter {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  touch-action: none;
+}
+
+.splitter.vertical {
+  width: 11px;
+  margin: 0 -5px;
+  cursor: col-resize;
+}
+
+.splitter.horizontal {
+  height: 11px;
+  margin: -5px 0;
+  cursor: row-resize;
+}
+
+/* The line itself is the border of the area next to it; the handle shows on hover, focus and drag. */
+.splitter::after {
+  content: '';
+  position: absolute;
+  background: transparent;
+}
+
+.splitter.vertical::after {
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 3px;
+}
+
+.splitter.horizontal::after {
+  left: 0;
+  right: 0;
+  top: 4px;
+  height: 3px;
+}
+
+.splitter:hover::after,
+.splitter:focus-visible::after,
+.splitter:active::after {
+  background: var(--accent);
+}
+
+.splitter:focus-visible {
+  outline: none;
+}
+
+@media (max-width: 1099px) {
+  .splitter {
+    display: none;
+  }
+}
+
 /* ---- step bar ---- */
 
 .stepbar {
@@ -699,10 +757,25 @@ input {
     min-height: 0;
   }
 
+  /* The drag handles set these sizes; the other area takes the rest, but never shrinks below its minimum. */
+  .program {
+    flex: 0 1 var(--program-width, 460px);
+    min-width: 280px;
+  }
+
+  .panels {
+    flex: 1 1 0;
+    min-width: 420px;
+  }
+
+  .panel-env {
+    min-height: 140px;
+  }
+
   /* The tabs stay put; only the list under them scrolls. */
   .panel-lower {
-    flex: 0 0 auto;
-    max-height: 290px;
+    flex: 0 1 var(--lower-height, 290px);
+    min-height: 120px;
     overflow: hidden;
   }
 

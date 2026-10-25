@@ -5,7 +5,7 @@ import { sourceOf } from '../core/ast';
 import type { Env, Frame } from '../core/env';
 import { framesOf } from '../core/env';
 import type { Step, Trace, ValueOfStep } from '../core/trace';
-import type { DenVal, StoreVal } from '../core/values';
+import type { DenVal, ExpVal, StoreVal } from '../core/values';
 
 interface FrameNames {
   /** "ρ0" for every init-env frame, then ρ1, ρ2, ... in the order frames were made. */
@@ -117,30 +117,77 @@ export function equation(trace: Trace, step: Step, max = 34): { call: string; re
 }
 
 /** One sentence on what this step does, or null when there is nothing useful to say. */
+// Each sentence is built from the step's own sub-steps (the value-of calls it
+// made), so it can quote the actual values. When those are missing because the
+// run stopped inside the step, a general sentence stands in.
 export function explain(trace: Trace, step: Step): string | null {
   if (step.kind !== 'value-of') return null;
   const exp = step.exp as unknown as Record<string, unknown> & { kind: string };
   const rho = envName(trace, step.env);
+  const [first, second, third] = subSteps(trace, step);
+  const value = (s: ValueOfStep | undefined) => (s?.result ? bookValue(s.result) : null);
   switch (exp.kind) {
     case 'var-exp':
       return explainLookup(trace, step, exp.var as string);
     case 'const-exp':
-      return 'A constant: its value is the number itself.';
-    case 'diff-exp':
+      return step.result ? `A constant: its value is ${bookValue(step.result)}.` : 'A constant: its value is the number itself.';
+    case 'diff-exp': {
+      const a = value(first);
+      const b = value(second);
+      if (a && b && step.result) return `Both operands first: ${a} and ${b}; their difference is ${bookValue(step.result)}.`;
       return 'Both operands are evaluated first, then subtracted.';
-    case 'zero?-exp':
+    }
+    case 'zero?-exp': {
+      const n = first?.result;
+      if (n?.tag === 'num-val') return `The operand is ${bookValue(n)}, which ${n.num === 0n ? 'is zero, so #t' : 'is not zero, so #f'}.`;
       return 'The operand is evaluated, then tested for zero.';
-    case 'if-exp':
+    }
+    case 'if-exp': {
+      const test = first?.result;
+      if (test?.tag === 'bool-val' && step.result) {
+        const branch = test.bool ? 'then' : 'else';
+        return `The test gave ${test.bool ? '#t' : '#f'}, so only the ${branch} branch runs; its value ${bookValue(step.result)} is the value of the if.`;
+      }
       return 'The test is evaluated first; only the branch it picks runs.';
-    case 'let-exp':
+    }
+    case 'let-exp': {
+      const bound = value(first);
+      if (bound && second) {
+        return `${exp.var as string} = ${bound} goes into a new frame ${envName(trace, second.env)} on top of ${rho}; the body runs there.`;
+      }
       return `The right-hand side is evaluated in ${rho}, then the body in ${rho} extended with ${exp.var as string}.`;
+    }
     case 'proc-exp':
-      return `Makes a closure that remembers ${rho}: (procedure ${exp.var as string} … ${rho}).`;
-    case 'call-exp':
+      return `Makes a closure (procedure ${exp.var as string} …) that remembers ${rho}, the env it was made in.`;
+    case 'call-exp': {
+      const proc = first?.result?.tag === 'proc-val' ? first.result.proc : null;
+      const arg = value(second);
+      if (proc && arg && third) {
+        const saved = envName(trace, proc.savedEnv);
+        const caller = saved === rho ? '' : `, not the caller's ${rho}`;
+        return `Calls (procedure ${proc.bvar} …) with ${proc.bvar} = ${arg}. The body runs in a new frame ${envName(trace, third.env)} on top of the closure's saved env ${saved}${caller}.`;
+      }
       return "The operator is evaluated, then the operand. The body then runs in the closure's saved env, extended with the parameter.";
+    }
     default:
       return null;
   }
+}
+
+/** The value-of calls a step made directly, in order. They sit between it and its last step. */
+function subSteps(trace: Trace, step: ValueOfStep): ValueOfStep[] {
+  const end = step.last ?? trace.steps.length - 1;
+  const subs: ValueOfStep[] = [];
+  for (let i = step.index + 1; i <= end; i++) {
+    const s = trace.steps[i];
+    if (s.kind === 'value-of' && s.parent === step.index) subs.push(s);
+  }
+  return subs;
+}
+
+/** A value inside a sentence: 200, #t, (procedure a …). */
+function sentenceValue(v: ExpVal): string {
+  return v.tag === 'proc-val' || v.tag === 'mutpair-val' ? bookValue(v) : boxValue(v);
 }
 
 function explainLookup(trace: Trace, step: ValueOfStep, name: string): string {
@@ -153,7 +200,7 @@ function explainLookup(trace: Trace, step: ValueOfStep, name: string): string {
       (frame.kind === 'extend-env-rec' && frame.pName === name) ||
       (frame.kind === 'extend-env-rec*' && frame.pNames.includes(name));
     if (bound) {
-      const value = step.result ? ` = ${boxValue(step.result)}` : '';
+      const value = step.result ? ` = ${sentenceValue(step.result)}` : '';
       const misses = skipped.filter((s, i) => s !== here && skipped.indexOf(s) === i);
       if (misses.length === 0) return `${name} is bound in ${here}: ${name}${value}.`;
       return `${name} is not bound in ${misses.join(', ')}, so the lookup goes on to ${here}, where ${name}${value}.`;
