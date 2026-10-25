@@ -1,6 +1,7 @@
 /* The "book" look: paper, ink, thin rules, a highlighter for the current expression. */
 
 :root {
+  color-scheme: light;
   --paper: #fbfaf7;
   --sheet: #ffffff;
   --ink: #1c1b19;
@@ -11,8 +12,49 @@
   --mark: #ffe27a;
   --mark-soft: #fff1b8;
   --error: #a3261c;
+  --hover: #f1efe9;
+  --run-hover: #3a3834;
+  --selection: #d7e3f4;
   --serif: 'Source Serif 4', Georgia, serif;
   --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+}
+
+/* Dark: the same book at night. Dark paper, light ink, an amber highlighter
+   (light text on it, 5.9:1). Follows the system unless the viewer picked a theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --paper: #1b1a18;
+    --sheet: #23221f;
+    --ink: #e9e5dc;
+    --muted: #a8a397;
+    --rule-muted: #7f7a70;
+    --rule-faint: #3a3834;
+    --accent: #8db4e6;
+    --mark: #6b5416;
+    --mark-soft: #3a3119;
+    --error: #f08a7e;
+    --hover: #2b2a27;
+    --run-hover: #cfcac0;
+    --selection: #34435a;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #1b1a18;
+  --sheet: #23221f;
+  --ink: #e9e5dc;
+  --muted: #a8a397;
+  --rule-muted: #7f7a70;
+  --rule-faint: #3a3834;
+  --accent: #8db4e6;
+  --mark: #6b5416;
+  --mark-soft: #3a3119;
+  --error: #f08a7e;
+  --hover: #2b2a27;
+  --run-hover: #cfcac0;
+  --selection: #34435a;
 }
 
 * {
@@ -107,13 +149,37 @@ input {
 }
 
 .run:hover {
-  background: #3a3834;
+  background: var(--run-hover);
 }
 
 .summary {
   margin-left: auto;
   font-family: var(--mono);
   font-size: 14px;
+}
+
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  background: var(--hover);
+}
+
+.theme-toggle svg {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* ---- workspace ---- */
@@ -200,6 +266,19 @@ input {
 .editor .cm-activeLine,
 .editor .cm-activeLineGutter {
   background: transparent;
+}
+
+/* CodeMirror's own cursor and selection colors assume a light page. */
+.editor .cm-content {
+  caret-color: var(--ink);
+}
+
+.editor .cm-cursor {
+  border-left-color: var(--ink);
+}
+
+.editor .cm-selectionLayer .cm-selectionBackground {
+  background: var(--selection) !important;
 }
 
 .tok-keyword {
@@ -379,7 +458,7 @@ input {
 }
 
 .trace-row:hover {
-  background: #f1efe9;
+  background: var(--hover);
 }
 
 .trace-row.current {
@@ -567,7 +646,7 @@ input {
 }
 
 .contour-ref:hover {
-  background: rgba(31, 78, 140, 0.08);
+  background: var(--hover);
 }
 
 .contour-depth {

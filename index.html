@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>COMP301 Visualizer</title>
+    <script>
+      // Apply a theme the viewer picked before, so the page doesn't flash the other one.
+      try {
+        var theme = localStorage.getItem('comp301.theme');
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
