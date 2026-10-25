@@ -5,6 +5,8 @@ import type { Outcome } from '../core/trace';
 import { LANGUAGES } from '../languages';
 import { layoutAst, stepOfNode } from './astLayout';
 import { AstTree } from './AstTree';
+import { analyzeScopes } from './contours';
+import { ContourView } from './ContourView';
 import { Editor } from './Editor';
 import { EnvDiagram } from './EnvDiagram';
 import { layoutEnv } from './envLayout';
@@ -16,10 +18,11 @@ import { TracePanel } from './TracePanel';
 const START = { language: 'proc', example: 2 };
 
 // Views that share the lower right panel. The state panels (env, store, cont) are never tabs.
-type LowerView = 'trace' | 'ast';
+type LowerView = 'trace' | 'ast' | 'contour';
 const LOWER_VIEWS: readonly { id: LowerView; title: string }[] = [
   { id: 'trace', title: 'Trace' },
   { id: 'ast', title: 'AST' },
+  { id: 'contour', title: 'Contour' },
 ];
 
 function moduleById(id: string): LanguageModule {
@@ -41,6 +44,8 @@ export default function App() {
   const [result, setResult] = useState<RunResult>(() => runSource(language, source));
   const [position, setPosition] = useState(0);
   const [lower, setLower] = useState<LowerView>('trace');
+  // A variable picked in the contour view; it applies only at the step where it was picked.
+  const [picked, setPicked] = useState<{ node: number; position: number } | null>(null);
 
   const trace = result.ok ? result.trace : null;
   const stale = result.ok && result.program.source !== source;
@@ -53,8 +58,15 @@ export default function App() {
     () => (trace && state && view === 'ast' ? layoutAst(trace.program, trace, state) : null),
     [trace, state, view],
   );
+  const scopes = useMemo(() => (trace && view === 'contour' ? analyzeScopes(trace.program) : null), [trace, view]);
   const step = state?.step;
   const current = !stale && step && step.kind !== 'apply-cont' ? step.exp.span : null;
+  const contourSelection =
+    picked && picked.position === position
+      ? picked.node
+      : step && step.kind !== 'apply-cont' && step.exp.kind === 'var-exp'
+        ? step.exp.id
+        : null;
   const parseError = result.ok ? null : { from: result.error.from, to: result.error.to };
 
   function run(module = language, text = source) {
@@ -174,8 +186,18 @@ export default function App() {
                   ))}
                 </div>
                 {view === 'ast' && <span className="label">click a node to go to its step · dashed: never evaluated</span>}
+                {view === 'contour' && <span className="label">boxes: where each declaration holds · numbers: lexical depth</span>}
               </div>
               {view === 'trace' && <TracePanel trace={trace} position={position} onPick={setPosition} />}
+              {view === 'contour' && scopes && (
+                <ContourView
+                  program={trace.program}
+                  scopes={scopes}
+                  keywords={language.grammar.keywords}
+                  selected={contourSelection}
+                  onSelect={(node) => setPicked({ node, position })}
+                />
+              )}
               {view === 'ast' && ast && (
                 <AstTree
                   rows={ast}

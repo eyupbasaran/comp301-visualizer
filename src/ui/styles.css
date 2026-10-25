@@ -504,6 +504,97 @@ input {
   font-style: italic;
 }
 
+/* ---- contours ---- */
+
+.contour-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contour-scroll {
+  overflow: auto;
+}
+
+.contour-host {
+  position: relative;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.contour-lines {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.contour {
+  fill: none;
+  stroke: var(--rule-muted);
+  stroke-width: 1.2;
+}
+
+.contour.crossed {
+  stroke: var(--accent);
+  stroke-dasharray: 5 4;
+}
+
+.contour.binding {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+}
+
+.contour-line {
+  position: absolute;
+  height: 20px;
+  line-height: 20px;
+  white-space: pre;
+  tab-size: 1;
+}
+
+.contour-mark {
+  position: absolute;
+  background: var(--mark);
+}
+
+.contour-ref {
+  position: absolute;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.contour-ref:hover {
+  background: rgba(31, 78, 140, 0.08);
+}
+
+.contour-depth {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 19px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 12px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.contour-ref.selected .contour-depth {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.contour-ref.unbound .contour-depth {
+  color: var(--error);
+}
+
+.contour-note {
+  max-width: 72ch;
+}
+
 /* ---- step bar ---- */
 
 .stepbar {
@@ -616,7 +707,8 @@ input {
   }
 
   .panel-lower > .trace,
-  .panel-lower > .ast {
+  .panel-lower > .ast,
+  .panel-lower > .contour-wrap {
     min-height: 0;
     overflow-y: auto;
   }

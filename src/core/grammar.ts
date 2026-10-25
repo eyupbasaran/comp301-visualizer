@@ -11,7 +11,7 @@
 // SLLGEN, the grammar must be LL(1); conflicts are reported when the Grammar
 // is built, so a broken grammar fails its first test instead of parsing wrong.
 
-import type { AstNode, Program } from './ast';
+import type { AstNode, Program, Span } from './ast';
 import { ParseError } from './errors';
 import { isIdentifierShaped, scan, type Token } from './scanner';
 
@@ -233,6 +233,9 @@ class Parser {
   /** End offset of the last token consumed. */
   private lastEnd = 0;
   private readonly nodes: AstNode[] = [];
+  private readonly identifierSpans = new Map<number, Span[]>();
+  /** Ids of the nodes being built, innermost last. */
+  private readonly building: number[] = [];
 
   constructor(
     private readonly grammar: Grammar,
@@ -245,7 +248,7 @@ class Parser {
     const root = this.parseNonterminal(this.grammar.start);
     const next = this.peek();
     if (next.kind !== 'eof') throw this.error(`Expected the end of the program but found ${this.describe(next)}`, next);
-    return { source: this.source, root, nodes: this.nodes };
+    return { source: this.source, root, nodes: this.nodes, identifierSpans: this.identifierSpans };
   }
 
   private peek(): Token {
@@ -264,9 +267,12 @@ class Parser {
     if (!production) throw this.error(`Expected ${this.grammar.describe(name)} but found ${this.describe(next)}`, next);
     const [, rhs, variant] = production;
     // Built field by field so the property order is the grammar order; span goes in third and is set last.
-    const node: Record<string, unknown> = { id: this.nodes.length, kind: variant, span: null };
+    const id = this.nodes.length;
+    const node: Record<string, unknown> = { id, kind: variant, span: null };
     this.nodes.push(node as unknown as AstNode);
+    this.building.push(id);
     this.parseItems(rhs, node);
+    this.building.pop();
     node.span = { from: next.from, to: this.lastEnd };
     return node as unknown as AstNode;
   }
@@ -281,9 +287,15 @@ class Parser {
         case 'nonterminal':
           into[item.field] = this.parseNonterminal(item.name);
           break;
-        case 'identifier':
-          into[item.field] = this.expect('identifier', 'an identifier').text;
+        case 'identifier': {
+          const token = this.expect('identifier', 'an identifier');
+          into[item.field] = token.text;
+          const owner = this.building[this.building.length - 1];
+          const spans = this.identifierSpans.get(owner) ?? [];
+          spans.push({ from: token.from, to: token.to });
+          this.identifierSpans.set(owner, spans);
           break;
+        }
         case 'number':
           into[item.field] = this.expect('number', 'a number').value;
           break;
