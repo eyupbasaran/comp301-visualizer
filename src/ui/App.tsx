@@ -14,6 +14,7 @@ import { bookValue } from './format';
 import { StepBar } from './StepBar';
 import { Splitter, useStoredSize } from './Splitter';
 import { StepBox } from './StepBox';
+import { ThemeToggle } from './ThemeToggle';
 import { TracePanel } from './TracePanel';
 
 const START = { language: 'proc', example: 2 };
@@ -148,6 +149,7 @@ export default function App() {
           Run
         </button>
         <div className="summary">{summary(result)}</div>
+        <ThemeToggle />
       </header>
 
       <main
