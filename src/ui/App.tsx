@@ -175,6 +175,11 @@ export default function App() {
           )}
           {stale && <p className="step-note">The program changed. Run it again to update the steps.</p>}
           {trace && state && !stale && <StepBox trace={trace} state={state} />}
+          <p className="credit">
+            The interpreters are translated from the code of <i>Essentials of Programming Languages</i>, 3rd ed., by
+            Friedman and Wand (<a href="https://github.com/mwand/eopl3">mwand/eopl3</a>), licensed under{' '}
+            <a href="https://creativecommons.org/licenses/by-nc/3.0/">CC BY-NC 3.0</a>.
+          </p>
         </section>
 
         <Splitter

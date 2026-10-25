@@ -674,6 +674,24 @@ input {
   max-width: 72ch;
 }
 
+/* ---- credit ---- */
+
+.credit {
+  margin: auto 0 0;
+  padding-top: 12px;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--muted);
+}
+
+.credit a {
+  color: var(--muted);
+}
+
+.credit a:hover {
+  color: var(--ink);
+}
+
 /* ---- drag handles ---- */
 
 .splitter {
