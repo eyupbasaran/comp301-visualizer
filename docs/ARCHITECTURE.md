@@ -49,8 +49,15 @@ source ──parse──▶ AST ──run──▶ Trace ──stateAt(trace, po
   - `interp.ts`: `value-of`
   - `index.ts`: the `LanguageModule`
 - `src/languages/index.ts`: the picker's list
-- `src/App.tsx`: a temporary dev page that dumps the state; the real UI replaces it
+- `src/ui/`: the web page (React). It only reads the trace.
 - `tests/`: Vitest
+
+## What the UI gives a new language for free
+
+- Once a language's `module` is set, it appears in the picker with its examples.
+- Without any UI work it gets: the editor highlight, the step box, the Environment diagram, Trace, AST, and Contour (for `let-exp`, `proc-exp` and `letrec-exp`).
+- A one-line explanation per step exists for the LET and PROC expressions (`explain` in `src/ui/format.ts`). New expression kinds show just the equation until a sentence is added there.
+- The Store and Continuation panels, and anything a language shows in its own way (thunks, pairs, the nameless translation), are UI work: say what your language needs.
 
 ## Adding a language
 
@@ -76,3 +83,5 @@ npm test           # all tests
 npm run typecheck
 npm run build
 ```
+
+Every merge to `main` runs the tests and deploys the site to GitHub Pages (`.github/workflows/deploy.yml`).
