@@ -31,6 +31,12 @@ export interface Program<Root extends AstNode = AstNode> {
   readonly root: Root;
   /** Every node, indexed by id. */
   readonly nodes: readonly AstNode[];
+  /**
+   * Where each node's identifier fields appear in the source, in source order
+   * (the x in `let x = ...`). Identifiers are plain strings in the AST, so
+   * this is the only place their positions are kept.
+   */
+  readonly identifierSpans?: ReadonlyMap<number, readonly Span[]>;
 }
 
 const NOT_FIELDS = new Set(['id', 'kind', 'span']);
