@@ -1,0 +1,15 @@
+# Course slides stay local (large, and not ours to publish)
+lectures/
+
+# Dependencies and build output
+node_modules/
+dist/
+
+# Local env and editor files
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
