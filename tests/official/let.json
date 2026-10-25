@@ -1,0 +1,130 @@
+{
+  "origin": "chapter3/let-lang/tests.scm",
+  "tests": [
+    {
+      "name": "positive-const",
+      "program": "11",
+      "expected": 11
+    },
+    {
+      "name": "negative-const",
+      "program": "-33",
+      "expected": -33
+    },
+    {
+      "name": "simple-arith-1",
+      "program": "-(44,33)",
+      "expected": 11
+    },
+    {
+      "name": "nested-arith-left",
+      "program": "-(-(44,33),22)",
+      "expected": -11
+    },
+    {
+      "name": "nested-arith-right",
+      "program": "-(55, -(22,11))",
+      "expected": 44
+    },
+    {
+      "name": "test-var-1",
+      "program": "x",
+      "expected": 10
+    },
+    {
+      "name": "test-var-2",
+      "program": "-(x,1)",
+      "expected": 9
+    },
+    {
+      "name": "test-var-3",
+      "program": "-(1,x)",
+      "expected": -9
+    },
+    {
+      "name": "test-unbound-var-1",
+      "program": "foo",
+      "expected": "error"
+    },
+    {
+      "name": "test-unbound-var-2",
+      "program": "-(x,foo)",
+      "expected": "error"
+    },
+    {
+      "name": "if-true",
+      "program": "if zero?(0) then 3 else 4",
+      "expected": 3
+    },
+    {
+      "name": "if-false",
+      "program": "if zero?(1) then 3 else 4",
+      "expected": 4
+    },
+    {
+      "name": "no-bool-to-diff-1",
+      "program": "-(zero?(0),1)",
+      "expected": "error"
+    },
+    {
+      "name": "no-bool-to-diff-2",
+      "program": "-(1,zero?(0))",
+      "expected": "error"
+    },
+    {
+      "name": "no-int-to-if",
+      "program": "if 1 then 2 else 3",
+      "expected": "error"
+    },
+    {
+      "name": "if-eval-test-true",
+      "program": "if zero?(-(11,11)) then 3 else 4",
+      "expected": 3
+    },
+    {
+      "name": "if-eval-test-false",
+      "program": "if zero?(-(11, 12)) then 3 else 4",
+      "expected": 4
+    },
+    {
+      "name": "if-eval-test-true-2",
+      "program": "if zero?(-(11, 11)) then 3 else foo",
+      "expected": 3
+    },
+    {
+      "name": "if-eval-test-false-2",
+      "program": "if zero?(-(11,12)) then foo else 4",
+      "expected": 4
+    },
+    {
+      "name": "simple-let-1",
+      "program": "let x = 3 in x",
+      "expected": 3
+    },
+    {
+      "name": "eval-let-body",
+      "program": "let x = 3 in -(x,1)",
+      "expected": 2
+    },
+    {
+      "name": "eval-let-rhs",
+      "program": "let x = -(4,1) in -(x,1)",
+      "expected": 2
+    },
+    {
+      "name": "simple-nested-let",
+      "program": "let x = 3 in let y = 4 in -(x,y)",
+      "expected": -1
+    },
+    {
+      "name": "check-shadowing-in-body",
+      "program": "let x = 3 in let x = 4 in x",
+      "expected": 4
+    },
+    {
+      "name": "check-shadowing-in-rhs",
+      "program": "let x = 3 in let x = -(x,1) in x",
+      "expected": 2
+    }
+  ]
+}
