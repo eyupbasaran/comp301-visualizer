@@ -290,8 +290,11 @@ input {
   color: var(--muted);
 }
 
+/* The highlighter is a background image, so it can sweep in from the left (see motion). */
 .cm-current {
-  background: var(--mark);
+  background-image: linear-gradient(var(--mark), var(--mark));
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   padding: 2px 0;
 }
 
@@ -420,9 +423,24 @@ input {
 }
 
 .env-card mark {
-  background: var(--mark);
+  background: linear-gradient(var(--mark), var(--mark)) no-repeat;
+  background-size: 100% 100%;
   color: var(--ink);
   padding: 1px 3px;
+}
+
+.env-label {
+  position: absolute;
+  font-family: var(--serif);
+  font-size: 13px;
+  font-style: italic;
+  line-height: 16px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.env-label.chain {
+  color: var(--accent);
 }
 
 .env-caption {
@@ -437,32 +455,57 @@ input {
 
 /* ---- trace ---- */
 
+/* A scrolling list with only the visible rows drawn (TracePanel). Rows are 28px. */
 .trace {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
   font-family: var(--mono);
   font-size: 14px;
   line-height: 20px;
 }
 
+.trace-track {
+  position: relative;
+}
+
+/* The highlight is one bar behind the rows; it slides to the current row. */
+.trace-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: var(--mark-soft);
+}
+
+.trace-rows {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .trace-row {
   width: 100%;
+  height: 28px;
   display: flex;
   gap: 16px;
   padding: 4px 8px;
   text-align: left;
+  white-space: nowrap;
   background: transparent;
   border: 0;
   cursor: pointer;
 }
 
-.trace-row:hover {
+.trace-row:hover:not(.current) {
   background: var(--hover);
 }
 
 .trace-row.current {
-  background: var(--mark-soft);
   font-weight: 600;
 }
 
@@ -548,7 +591,10 @@ input {
   font-size: 14px;
   line-height: 20px;
   color: var(--ink);
-  background: transparent;
+  background-color: transparent;
+  background-image: linear-gradient(var(--mark), var(--mark));
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
   border: 1px solid transparent;
   border-radius: 0;
   cursor: pointer;
@@ -569,7 +615,7 @@ input {
 .ast-node.current,
 .ast-node.current:hover {
   font-weight: 600;
-  background: var(--mark);
+  background-size: 100% 100%;
   border-color: var(--ink);
 }
 
@@ -672,6 +718,209 @@ input {
 
 .contour-note {
   max-width: 72ch;
+}
+
+/* ---- help ---- */
+
+.help-button {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.help-button:hover {
+  background: var(--hover);
+}
+
+.help-dialog {
+  width: min(860px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--ink);
+}
+
+.help-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.help-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 0 28px 28px;
+}
+
+.help-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 -28px;
+  padding: 18px 28px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--ink);
+}
+
+.help-head h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.help-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.help-close svg {
+  stroke: var(--ink);
+  stroke-width: 1.8;
+}
+
+.help-sheet h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.help-sheet p {
+  margin: 0 0 10px;
+  font-size: 16px;
+  line-height: 25px;
+  max-width: 70ch;
+}
+
+.help-sheet code,
+.help-program {
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.help-example {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 16px;
+  background: var(--sheet);
+  border: 1px solid var(--rule-faint);
+}
+
+.help-program {
+  margin: 0;
+  line-height: 22px;
+}
+
+.help-example figcaption {
+  font-size: 15px;
+  line-height: 23px;
+  color: var(--muted);
+}
+
+.help-note {
+  color: var(--ink);
+}
+
+/* ---- motion ----
+   Only after a single step (App sets data-motion="step"); jumps are drawn at once.
+   Off entirely for viewers who ask their system for reduced motion. */
+
+@keyframes swipe {
+  from {
+    background-size: 0% 100%;
+  }
+  to {
+    background-size: 100% 100%;
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+/* The highlighter sweeps in from the left. */
+.app[data-motion='step'] .cm-current,
+.app[data-motion='step'] .env-card mark {
+  animation: swipe 280ms ease-out both;
+}
+
+.app[data-motion='step'] .ast-node {
+  transition: background-size 280ms ease-out;
+}
+
+/* Boxes glide to their new place; new boxes drop in; new arrows draw themselves after the boxes settle. */
+.app[data-motion='step'] .env-card,
+.app[data-motion='step'] .env-caption,
+.app[data-motion='step'] .env-label {
+  transition:
+    left 280ms ease,
+    top 280ms ease,
+    width 280ms ease,
+    border-color 200ms ease,
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+.app[data-motion='step'] .env-card.entering {
+  animation: card-in 300ms ease-out both;
+}
+
+.app[data-motion='step'] .arrow.entering {
+  stroke-dasharray: 1;
+  animation: draw 380ms ease-out 140ms both;
+}
+
+/* The trace highlight slides to the next row. */
+.app[data-motion='step'] .trace-cursor {
+  transition: transform 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app *,
+  .app *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 /* ---- credit ---- */
@@ -880,6 +1129,7 @@ input {
   .panel-lower > .ast,
   .panel-lower > .contour-wrap {
     min-height: 0;
+    max-height: none;
     overflow-y: auto;
   }
 

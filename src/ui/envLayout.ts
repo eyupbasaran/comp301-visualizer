@@ -47,14 +47,24 @@ export interface DiagramArrow {
   readonly emphasis: 'chain' | 'muted';
 }
 
+/** Text next to an arrow: "saved env" under a closure. */
+export interface DiagramLabel {
+  readonly key: string;
+  readonly x: number;
+  readonly y: number;
+  readonly text: string;
+  readonly emphasis: 'chain' | 'muted';
+}
+
 export interface Diagram {
   readonly width: number;
   readonly height: number;
   readonly cards: readonly DiagramCard[];
   readonly arrows: readonly DiagramArrow[];
+  readonly labels: readonly DiagramLabel[];
 }
 
-export const EMPTY_DIAGRAM: Diagram = { width: 0, height: 0, cards: [], arrows: [] };
+export const EMPTY_DIAGRAM: Diagram = { width: 0, height: 0, cards: [], arrows: [], labels: [] };
 
 // Geometry, in px. Text is monospace, so widths follow from character counts.
 const CHAR = 8.4;
@@ -259,6 +269,7 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
   }
 
   const arrows: DiagramArrow[] = [];
+  const labels: DiagramLabel[] = [];
   const branchCount = new Map<Node, number>();
   for (const node of all) {
     const parent = node.parent;
@@ -290,6 +301,7 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
     if (!c.target) continue;
     const sx = boxX + laneW[c.owner.col] / 2;
     const sy = owner.y + CARD_H;
+    const pointer = c.proc === runningProc ? 'chain' : emphasis;
     if (c.target === c.owner) {
       const ex = owner.x + owner.w * 0.75;
       const ey = owner.y + CARD_H + 1;
@@ -298,17 +310,15 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
       const t = at(c.target);
       const ex = t.x + t.w + 1;
       const ey = t.y + CARD_H / 2;
-      arrows.push({
-        key: `s${c.key}`,
-        d: `M ${sx} ${sy} C ${sx} ${(sy + ey) / 2}, ${ex + 48} ${ey}, ${ex} ${ey}`,
-        emphasis: c.proc === runningProc ? 'chain' : emphasis,
-      });
+      arrows.push({ key: `s${c.key}`, d: `M ${sx} ${sy} C ${sx} ${(sy + ey) / 2}, ${ex + 48} ${ey}, ${ex} ${ey}`, emphasis: pointer });
     }
+    // Just under the closure, beside where its arrow leaves: the gap between rows is free there.
+    labels.push({ key: `l${c.key}`, x: sx + 8, y: sy + 5, text: 'saved env', emphasis: pointer });
   }
 
   if (cards.length === 0) return EMPTY_DIAGRAM;
   const right = Math.max(...cards.map((c) => c.x + c.w));
-  return { width: right + PAD, height: TOP + maxDepth * ROW + CARD_H + PAD, cards, arrows };
+  return { width: right + PAD, height: TOP + maxDepth * ROW + CARD_H + PAD, cards, arrows, labels };
 }
 
 /** The closure whose body this step is running in: its body contains the expression, and its saved env is on this step's chain. */

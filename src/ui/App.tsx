@@ -9,6 +9,7 @@ import { analyzeScopes } from './contours';
 import { ContourView } from './ContourView';
 import { Editor } from './Editor';
 import { EnvDiagram } from './EnvDiagram';
+import { EnvHelp } from './EnvHelp';
 import { layoutEnv } from './envLayout';
 import { bookValue } from './format';
 import { StepBar } from './StepBar';
@@ -58,6 +59,15 @@ export default function App() {
   const workspaceWidth = workspace.current?.clientWidth ?? 1440;
   const panelsHeight = panels.current?.clientHeight ?? 760;
 
+  // "step" after a move of exactly one step: the page animates the change. Any
+  // other move (a jump, a new run) is drawn at once. It stays until the next move.
+  const lastPosition = useRef(position);
+  const motion = useRef<'step' | 'jump'>('jump');
+  if (lastPosition.current !== position) {
+    motion.current = Math.abs(position - lastPosition.current) === 1 ? 'step' : 'jump';
+    lastPosition.current = position;
+  }
+
   const trace = result.ok ? result.trace : null;
   const stale = result.ok && result.program.source !== source;
   const count = trace ? trace.steps.length : 0;
@@ -83,6 +93,8 @@ export default function App() {
   function run(module = language, text = source) {
     setResult(runSource(module, text));
     setPosition(0);
+    // A new run is never animated, even if the old position happened to be 1.
+    lastPosition.current = Number.NaN;
   }
 
   function pickLanguage(id: string) {
@@ -102,7 +114,7 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target?.closest('.cm-editor, input, select, textarea, [role=separator]')) return;
+      if (target?.closest('.cm-editor, input, select, textarea, [role=separator], dialog')) return;
       const moves: Record<string, (p: number) => number> = {
         ArrowLeft: (p) => p - 1,
         ArrowRight: (p) => p + 1,
@@ -121,7 +133,7 @@ export default function App() {
   const exampleIndex = language.examples.findIndex((example) => example.source === source);
 
   return (
-    <div className="app">
+    <div className="app" data-motion={motion.current}>
       <header className="topbar">
         <h1 className="brand">COMP301 Visualizer</h1>
         <div className="field">
@@ -200,6 +212,7 @@ export default function App() {
               <div className="panel-head">
                 <h2>Environment</h2>
                 <span className="label">newest frame first; bold boxes are the env of this step</span>
+                <EnvHelp />
               </div>
               {diagram && diagram.cards.length > 0 ? (
                 <EnvDiagram diagram={diagram} />
@@ -234,7 +247,7 @@ export default function App() {
                 {view === 'ast' && <span className="label">click a node to go to its step · dashed: never evaluated</span>}
                 {view === 'contour' && <span className="label">boxes: where each declaration holds · numbers: lexical depth</span>}
               </div>
-              {view === 'trace' && <TracePanel trace={trace} position={position} onPick={setPosition} />}
+              {view === 'trace' && <TracePanel trace={trace} position={position} smooth={motion.current === 'step'} onPick={setPosition} />}
               {view === 'contour' && scopes && (
                 <ContourView
                   program={trace.program}
