@@ -54,6 +54,18 @@ describe('environment diagram', () => {
     ]);
   });
 
+  it('labels each closure arrow "saved env", clear of every box', () => {
+    const { cards, labels } = layoutEnv(trace, X_IN_F);
+    expect(labels.map((l) => `${l.text} ${l.emphasis}`).sort()).toEqual(['saved env chain', 'saved env muted']);
+    for (const label of labels) {
+      const w = label.text.length * 7;
+      for (const c of cards) {
+        const overlap = label.x < c.x + c.w && c.x < label.x + w && label.y < c.y + c.h && c.y < label.y + 16;
+        expect(overlap, `label at ${label.x},${label.y} overlaps ${c.key}`).toBe(false);
+      }
+    }
+  });
+
   it('keeps cards from overlapping', () => {
     for (const position of [0, 8, X_IN_F, 18]) {
       const { cards } = layoutEnv(trace, position);
