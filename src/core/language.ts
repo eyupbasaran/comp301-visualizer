@@ -30,12 +30,22 @@ export interface Example {
   readonly source: string;
 }
 
+/** One of several implementations the official code has for a language. */
+export interface Variant {
+  /** The official file it follows, as the picker shows it: "pairval2". */
+  readonly id: string;
+  /** One sentence for the picker's tooltip. */
+  readonly description: string;
+}
+
 export interface LanguageModule {
   readonly id: LanguageId;
   /** As the course writes it: "LET", "IMPLICIT-REFS". */
   readonly name: string;
   /** The official EOPL3 folder this is ported from, e.g. "chapter3/let-lang". */
   readonly origin: string;
+  /** Set when the official code has more than one implementation of the language and this is one of them. */
+  readonly variant?: Variant;
   readonly grammar: Grammar;
   readonly panels: readonly PanelId[];
   readonly examples: readonly Example[];

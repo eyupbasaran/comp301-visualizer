@@ -74,11 +74,12 @@ export function bookValue(v: StoreVal): string {
     case 'ref-val':
       return `(ref-val ${v.ref})`;
     case 'mutpair-val':
-      return `(a-pair ${v.p.leftLoc} ${v.p.rightLoc})`;
+      // pairval2.scm: the pair is a bare location, so it keeps its tag.
+      return typeof v.p === 'number' ? `(mutpair-val ${v.p})` : `(a-pair ${v.p.leftLoc} ${v.p.rightLoc})`;
   }
 }
 
-/** A value in a store cell: 200, #t, (procedure x …), (a-pair 3 4), (a-thunk «-(x,1)» ρ2). */
+/** A value in a store cell: 200, #t, (procedure x …), (a-pair 3 4), (mutpair-val 3), (a-thunk «-(x,1)» ρ2). */
 export function storeValue(trace: Trace, v: StoreVal): string {
   if ('kind' in v) {
     const exp = sourceOf(trace.program, v.exp1).replace(/\s+/g, ' ').trim();
@@ -246,7 +247,9 @@ export function explain(trace: Trace, step: Step): string | null {
     case 'newpair-exp': {
       const [l, r] = own.filter((e) => e.kind === 'newref');
       if (l?.kind === 'newref' && r?.kind === 'newref') {
-        return `${bookValue(l.val)} and ${bookValue(r.val)} go into two new locations, ${l.loc} and ${r.loc}; the pair (a-pair ${l.loc} ${r.loc}) holds them.`;
+        const both = `${bookValue(l.val)} and ${bookValue(r.val)} go into two new locations, ${l.loc} and ${r.loc}`;
+        if (pairRef(step.result) !== null) return `${both}; the pair is a reference to the first one: (mutpair-val ${l.loc}).`;
+        return `${both}; the pair (a-pair ${l.loc} ${r.loc}) holds them.`;
       }
       return 'Both operands are evaluated, then each goes into a new location.';
     }
@@ -254,6 +257,12 @@ export function explain(trace: Trace, step: Step): string | null {
     case 'right-exp': {
       const side = exp.kind === 'left-exp' ? 'left' : 'right';
       const read = own.find((e) => e.kind === 'deref');
+      const p = pairRef(first?.result);
+      if (read && step.result && p !== null) {
+        return side === 'left'
+          ? `The pair is location ${p}, which holds its left element, ${bookValue(step.result)}.`
+          : `The pair is location ${p}; its right element is in the next one, ${p} + 1 = ${read.loc}, which holds ${bookValue(step.result)}.`;
+      }
       if (read && step.result) return `Reads the pair's ${side} location, ${read.loc}, which holds ${bookValue(step.result)}.`;
       return `The operand must be a pair; ${side} reads its ${side} location.`;
     }
@@ -261,8 +270,14 @@ export function explain(trace: Trace, step: Step): string | null {
     case 'setright-exp': {
       const side = exp.kind === 'setleft-exp' ? 'left' : 'right';
       const write = own.find((e) => e.kind === 'setref');
+      const p = pairRef(first?.result);
+      const returns = side === 'left' ? '⌈82⌉' : '⌈83⌉';
+      if (write?.kind === 'setref' && p !== null) {
+        const where = side === 'left' ? 'there' : `into the next one, ${p} + 1 = ${write.loc}`;
+        return `The pair is location ${p}; set${side} writes ${bookValue(write.val)} ${where}, replacing ${bookValue(write.old)}, and returns ${returns}.`;
+      }
       if (write?.kind === 'setref') {
-        return `Writes ${bookValue(write.val)} into the pair's ${side} location, ${write.loc}, replacing ${bookValue(write.old)}; set${side} returns ${side === 'left' ? '⌈82⌉' : '⌈83⌉'}.`;
+        return `Writes ${bookValue(write.val)} into the pair's ${side} location, ${write.loc}, replacing ${bookValue(write.old)}; set${side} returns ${returns}.`;
       }
       return `Both operands are evaluated; the first must be a pair, and the second is written into its ${side} location.`;
     }
@@ -456,6 +471,11 @@ function subSteps(trace: Trace, step: ValueOfStep): ValueOfStep[] {
 /** A value inside a sentence: 200, #t, (procedure a …). */
 function sentenceValue(v: ExpVal): string {
   return v.tag === 'proc-val' || v.tag === 'mutpair-val' ? bookValue(v) : boxValue(v);
+}
+
+/** The location a pair is, when it is a bare reference (pairval2.scm); null for an a-pair or a non-pair. */
+function pairRef(v: ExpVal | undefined): number | null {
+  return v?.tag === 'mutpair-val' && typeof v.p === 'number' ? v.p : null;
 }
 
 function explainLookup(trace: Trace, step: ValueOfStep, name: string): string {

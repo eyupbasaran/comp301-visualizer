@@ -87,6 +87,8 @@ export default function App() {
   const side = language.panels.includes('store') ? 'store' : language.panels.includes('cont') ? 'cont' : null;
   const storeRows = useMemo(() => (trace && side === 'store' ? layoutStore(trace, position) : null), [trace, side, position]);
   const contView = useMemo(() => (trace && side === 'cont' ? layoutCont(trace, position) : null), [trace, side, position]);
+  // The implementations of this language, when the official code has more than one.
+  const variants = LANGUAGES.find((entry) => entry.id === language.id)?.variants;
   const views = LOWER_VIEWS.filter((v) => language.panels.includes(v.id));
   const view = views.some((v) => v.id === lower) ? lower : (views[0]?.id ?? 'trace');
   const ast = useMemo(
@@ -122,6 +124,12 @@ export default function App() {
     setLanguage(module);
     setSource(text);
     run(module, text);
+  }
+
+  // Only the implementation changes, so the same program runs again.
+  function pickVariant(module: LanguageModule) {
+    setLanguage(module);
+    run(module, source);
   }
 
   function pickExample(index: number) {
@@ -164,6 +172,21 @@ export default function App() {
               </option>
             ))}
           </select>
+          {variants && (
+            <select
+              className="mono"
+              aria-label={variants.label}
+              title={language.variant?.description}
+              value={variants.modules.indexOf(language)}
+              onChange={(e) => pickVariant(variants.modules[Number(e.target.value)])}
+            >
+              {variants.modules.map((module, i) => (
+                <option key={module.variant?.id ?? i} value={i}>
+                  {module.variant?.id ?? module.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="field">
           <label htmlFor="example">Example</label>

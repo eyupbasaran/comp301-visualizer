@@ -26,8 +26,15 @@ export interface Proc {
   readonly savedEnv: Env;
 }
 
-/** (a-pair left-loc right-loc), from mutable-pairs. */
-export interface MutPair {
+/**
+ * A mutable pair, in one of the two representations of chapter 4: an APair
+ * (pairval1.scm), or the Ref of the left element, with the right one in the
+ * next location (pairval2.scm).
+ */
+export type MutPair = APair | Ref;
+
+/** (a-pair left-loc right-loc), from pairval1.scm. */
+export interface APair {
   readonly kind: 'a-pair';
   readonly leftLoc: Ref;
   readonly rightLoc: Ref;

@@ -1,5 +1,5 @@
 // Port of chapter4/call-by-reference/interp.scm, with the pairs of pairval1.scm
-// (as in MUTABLE-PAIRS). Same clauses, same evaluation order. Each value-of
+// (the MUTABLE-PAIRS default). Same clauses, same evaluation order. Each value-of
 // call is one step. apply-procedure and value-of-operand are not steps; the
 // value-of calls they make are.
 //
@@ -12,6 +12,7 @@
 
 import type { Program } from '../../core/ast';
 import type { Env } from '../../core/env';
+import { pairOps } from '../../core/pairvals';
 import { record, type RunOptions, type Trace } from '../../core/trace';
 import {
   boolVal,
@@ -23,7 +24,6 @@ import {
   numVal,
   procVal,
   type ExpVal,
-  type MutPair,
   type Proc,
   type Ref,
 } from '../../core/values';
@@ -37,16 +37,7 @@ export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Tr
     const deref = (ref: number) => rec.store.deref(ref) as ExpVal;
 
     // pairval1.scm
-    // make-pair : ExpVal * ExpVal -> MutPair
-    const makePair = (val1: ExpVal, val2: ExpVal): MutPair => {
-      const leftLoc = rec.store.newref(val1);
-      const rightLoc = rec.store.newref(val2);
-      return { kind: 'a-pair', leftLoc, rightLoc };
-    };
-    const left = (p: MutPair) => deref(p.leftLoc);
-    const right = (p: MutPair) => deref(p.rightLoc);
-    const setleft = (p: MutPair, val: ExpVal) => rec.store.setref(p.leftLoc, val);
-    const setright = (p: MutPair, val: ExpVal) => rec.store.setref(p.rightLoc, val);
+    const { makePair, left, right, setleft, setright } = pairOps('pairval1', rec.store);
 
     // value-of : Exp * Env -> ExpVal
     function valueOf(exp: Expression, env: Env): ExpVal {

@@ -30,7 +30,7 @@ export function valueToSExp(v: StoreVal): string {
     case 'ref-val':
       return `(ref-val ${v.ref})`;
     case 'mutpair-val':
-      return `(mutpair-val (a-pair ${v.p.leftLoc} ${v.p.rightLoc}))`;
+      return typeof v.p === 'number' ? `(mutpair-val ${v.p})` : `(mutpair-val (a-pair ${v.p.leftLoc} ${v.p.rightLoc}))`;
   }
 }
 
@@ -77,7 +77,9 @@ export function writeValue(v: ExpVal): string {
     case 'ref-val':
       return `#(struct:ref-val ${v.ref})`;
     case 'mutpair-val':
-      return `#(struct:mutpair-val #(struct:a-pair ${v.p.leftLoc} ${v.p.rightLoc}))`;
+      return typeof v.p === 'number'
+        ? `#(struct:mutpair-val ${v.p})`
+        : `#(struct:mutpair-val #(struct:a-pair ${v.p.leftLoc} ${v.p.rightLoc}))`;
   }
 }
 
@@ -94,6 +96,6 @@ export function showValue(v: StoreVal): string {
     case 'ref-val':
       return `(ref-val ${v.ref})`;
     case 'mutpair-val':
-      return `(mutpair-val ${v.p.leftLoc} ${v.p.rightLoc})`;
+      return typeof v.p === 'number' ? `(mutpair-val ${v.p})` : `(mutpair-val ${v.p.leftLoc} ${v.p.rightLoc})`;
   }
 }
