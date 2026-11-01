@@ -1,4 +1,5 @@
-// Every value-of call as an equation, indented by nesting, in a scrolling list.
+// Every step as an equation, indented by nesting (in CPS: by the size of the
+// continuation), in a scrolling list.
 // Only the rows in view are drawn, so a 100,000-step run stays fast. The
 // highlight is one bar that slides to the current row; clicking a row moves
 // the slider there.
@@ -99,6 +100,11 @@ export function TracePanel({ trace, position, smooth, onPick }: Props) {
                 >
                   <span className="trace-num">{i + 1}</span>
                   <span className="trace-call" style={{ paddingLeft: Math.min(MAX_INDENT, step.depth * INDENT) }}>
+                    {step.kind === 'value-of/k' && step.bounced && (
+                      <span className="trace-bounce" title="The trampoline called a bounce before this step">
+                        bounce{' '}
+                      </span>
+                    )}
                     {call}
                   </span>
                   <span className="trace-result">{result ? `= ${result}` : ''}</span>

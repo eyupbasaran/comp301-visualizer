@@ -3,7 +3,7 @@
 
 import { sourceOf, type AstNode } from '../core/ast';
 import type { Env, Frame } from '../core/env';
-import { framesOf } from '../core/env';
+import { frameBinding, framesOf } from '../core/env';
 import type { StoreEvent } from '../core/store';
 import type { Step, Trace, ValueOfStep } from '../core/trace';
 import type { DenVal, ExpVal, StoreVal } from '../core/values';
@@ -155,7 +155,7 @@ export function equation(trace: Trace, step: Step, max = 34): { call: string; re
 // made), so it can quote the actual values. When those are missing because the
 // run stopped inside the step, a general sentence stands in.
 export function explain(trace: Trace, step: Step): string | null {
-  if (step.kind !== 'value-of') return null;
+  if (step.kind !== 'value-of') return explainCps(trace, step);
   const exp = step.exp as unknown as Record<string, unknown> & { kind: string };
   const rho = envName(trace, step.env);
   const [first, second] = subSteps(trace, step);
@@ -278,6 +278,99 @@ export function explain(trace: Trace, step: Step): string | null {
     default:
       return null;
   }
+}
+
+/**
+ * A step of the CPS interpreters. value-of/k never returns a value to its
+ * caller: it starts evaluating and hands a continuation on. What it made is
+ * visible in the next step (the new frame, the new env, the value sent).
+ */
+function explainCps(trace: Trace, step: Exclude<Step, ValueOfStep>): string | null {
+  const next = trace.steps[step.index + 1] as Step | undefined;
+  const sent = next?.kind === 'apply-cont' ? bookValue(next.val) : null;
+  const nextEnv = next && next.kind !== 'apply-cont' ? envName(trace, next.env) : null;
+  const k = step.cont as unknown as Record<string, unknown> & { kind: string; savedCont?: { kind: string } };
+  const savedKind = k.savedCont?.kind ?? 'the next frame';
+
+  if (step.kind === 'value-of/k') {
+    const exp = step.exp as unknown as Record<string, unknown> & { kind: string };
+    const rho = envName(trace, step.env);
+    switch (exp.kind) {
+      case 'const-exp':
+        return `A constant: ${sent ?? 'its value'} goes straight to the continuation, ${k.kind}.`;
+      case 'var-exp': {
+        const name = exp.var as string;
+        const frame = frameBinding(step.env, name);
+        if (!frame) return `${name} is not bound in any frame, so apply-env reports an error.`;
+        const here = envName(trace, frame);
+        if (frame.kind !== 'extend-env') {
+          return `${name} is bound by letrec in ${here}: a new closure, whose saved env is ${here}, goes to ${k.kind}.`;
+        }
+        return `${name} is bound in ${here}: its value${sent ? `, ${sent},` : ''} goes to ${k.kind}.`;
+      }
+      case 'proc-exp':
+        return `Makes a closure (procedure ${exp.var as string} …) that remembers ${rho}, and hands it to ${k.kind}.`;
+      case 'letrec-exp':
+        return `${exp.pName as string} is bound recursively in a new frame${nextEnv ? ` ${nextEnv}` : ''} on top of ${rho}; the body runs there, with the same continuation.`;
+      case 'zero?-exp':
+        return `Evaluates the operand, with a new zero1-cont on top that will test it for zero.`;
+      case 'let-exp':
+        return `Evaluates the right-hand side, with a new let-exp-cont on top that remembers ${exp.var as string}, the body and ${rho}.`;
+      case 'if-exp':
+        return `Evaluates the test, with a new if-test-cont on top that remembers both branches and ${rho}.`;
+      case 'diff-exp':
+        return `Evaluates the first operand, with a new diff1-cont on top that remembers the second, ${quote(trace, exp.exp2 as AstNode)}, and ${rho}.`;
+      case 'call-exp':
+        return `Evaluates the operator, with a new rator-cont on top that remembers the operand, ${quote(trace, exp.rand as AstNode)}, and ${rho}.`;
+      default:
+        return null;
+    }
+  }
+
+  const val = bookValue(step.val);
+  switch (k.kind) {
+    case 'end-cont':
+      return `end-cont: the computation is over. It prints "End of computation.", and ${val} is the value of the program.`;
+    case 'zero1-cont': {
+      if (step.val.tag !== 'num-val') return `zero1-cont needs a number, but got ${val}.`;
+      const zero = step.val.num === 0n;
+      return `${val} ${zero ? 'is zero, so (bool-val #t)' : 'is not zero, so (bool-val #f)'} goes to the next frame, ${savedKind}.`;
+    }
+    case 'let-exp-cont':
+      return `${k.var as string} = ${val} goes into a new frame${nextEnv ? ` ${nextEnv}` : ''} on top of ${envName(trace, k.savedEnv as Env)}, the env this frame saved; the body runs there, with the saved continuation.`;
+    case 'if-test-cont': {
+      if (step.val.tag !== 'bool-val') return `if-test-cont needs a boolean, but got ${val}.`;
+      const branch = step.val.bool ? 'then' : 'else';
+      const exp = (step.val.bool ? k.exp2 : k.exp3) as AstNode;
+      return `The test gave ${step.val.bool ? '#t' : '#f'}, so only the ${branch} branch, ${quote(trace, exp)}, runs, in ${envName(trace, k.savedEnv as Env)}, with the saved continuation.`;
+    }
+    case 'diff1-cont':
+      return `The first operand is ${val}. Now the second, ${quote(trace, k.exp2 as AstNode)}, is evaluated in ${envName(trace, k.savedEnv as Env)}, with a diff2-cont that remembers ${val}.`;
+    case 'diff2-cont': {
+      const val1 = k.val1 as ExpVal;
+      if (val1.tag !== 'num-val' || step.val.tag !== 'num-val') return `diff2-cont needs two numbers, but got ${bookValue(val1)} and ${val}.`;
+      return `Both operands are known: ${bookValue(val1)} − ${val} = ⌈${val1.num - step.val.num}⌉, which goes to ${savedKind}.`;
+    }
+    case 'rator-cont':
+      return `The operator is ${val}. Now the operand, ${quote(trace, k.rand as AstNode)}, is evaluated in ${envName(trace, k.savedEnv as Env)}, with a rand-cont that remembers the operator.`;
+    case 'rand-cont': {
+      const op = k.val1 as ExpVal;
+      if (op.tag !== 'proc-val') return `rand-cont needs a procedure, but the operator was ${bookValue(op)}.`;
+      const proc = `(procedure ${op.proc.bvar} …)`;
+      const where = `in a new frame${nextEnv ? ` ${nextEnv}` : ''} on top of the closure's saved env ${envName(trace, op.proc.savedEnv)}, with the saved continuation`;
+      if (next?.kind === 'value-of/k' && next.bounced) {
+        return `The operand is ${val}. apply-procedure/k does not run the body of ${proc} itself: it returns a bounce, a procedure of no arguments. The trampoline calls it, and the body runs ${where}.`;
+      }
+      return `The operand is ${val}. apply-procedure/k runs the body of ${proc} ${where}.`;
+    }
+    default:
+      return null;
+  }
+}
+
+/** A piece of the program in «», cut short. */
+function quote(trace: Trace, node: AstNode): string {
+  return `«${code(trace, node, 20)}»`;
 }
 
 /**

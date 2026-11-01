@@ -17,7 +17,8 @@ source ──parse──▶ AST ──run──▶ Trace ──stateAt(trace, po
 - In CPS and TRAMPOLINED, every `value-of/k` call and every `apply-cont` call is one step.
 - Nothing else is a step. The value a call returns is stored on that call's step (`result`) and shown next to its expression.
 - The slider has `steps.length + 1` positions: position `p` shows step `p`, the last position shows the end of the run.
-- Checks: `-(-(x,3), -(v,i))` is 7 steps in LET; T8 (`double 6`) is 68 steps in LETREC.
+- Checks: `-(-(x,3), -(v,i))` is 7 steps in LET; T8 (`double 6`) is 68 steps in LETREC; T23 (`-(-(44,11),3)`) is 10 steps in CPS.
+- In CPS and TRAMPOLINED a step's `depth` is the size of its continuation, so the trace indents by the control context. TRAMPOLINED marks the step right after each bounce (`bounced`).
 
 ## The trace (`src/core/trace.ts`)
 
@@ -56,9 +57,9 @@ source ──parse──▶ AST ──run──▶ Trace ──stateAt(trace, po
 ## What the UI gives a new language for free
 
 - Once a language's `module` is set, it appears in the picker with its examples.
-- Without any UI work it gets: the editor highlight, the step box, the Environment diagram, Trace, AST, Contour (for `let-exp`, `proc-exp` and `letrec-exp`), and the Store panel when `panels` has `'store'`.
+- Without any UI work it gets: the editor highlight, the step box, the Environment diagram, Trace, AST, Contour (for `let-exp`, `proc-exp` and `letrec-exp`), the Store panel when `panels` has `'store'`, and the Continuation panel when it has `'cont'`.
 - A one-line explanation per step exists for every expression kind so far (`explain` in `src/ui/format.ts`). New expression kinds show just the equation until a sentence is added there.
-- The Continuation panel is UI work: say what your language needs. Thunks and pairs in the store, and locations in the env diagram, are already drawn.
+- Thunks and pairs in the store, locations in the env diagram and continuation frames are already drawn. Anything else a language shows in its own way is UI work.
 
 ## Adding a language
 

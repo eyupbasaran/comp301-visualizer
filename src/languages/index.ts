@@ -4,6 +4,7 @@ import type { LanguageId, LanguageModule } from '../core/language';
 import { callByNameLanguage } from './call-by-name';
 import { callByNeedLanguage } from './call-by-need';
 import { callByReferenceLanguage } from './call-by-reference';
+import { cpsLanguage } from './cps';
 import { explicitRefsLanguage } from './explicit-refs';
 import { implicitRefsLanguage } from './implicit-refs';
 import { letLanguage } from './let';
@@ -11,6 +12,7 @@ import { letrecLanguage } from './letrec';
 import { mutablePairsLanguage } from './mutable-pairs';
 import { namelessLanguage } from './nameless';
 import { procLanguage } from './proc';
+import { trampolinedLanguage } from './trampolined';
 
 export interface LanguageEntry {
   readonly id: LanguageId;
@@ -29,8 +31,8 @@ export const LANGUAGES: readonly LanguageEntry[] = [
   { id: 'call-by-reference', name: 'CALL-BY-REFERENCE', module: callByReferenceLanguage },
   { id: 'call-by-name', name: 'CALL-BY-NAME', module: callByNameLanguage },
   { id: 'call-by-need', name: 'CALL-BY-NEED', module: callByNeedLanguage },
-  { id: 'cps', name: 'CPS', module: null },
-  { id: 'trampolined', name: 'TRAMPOLINED', module: null },
+  { id: 'cps', name: 'CPS', module: cpsLanguage },
+  { id: 'trampolined', name: 'TRAMPOLINED', module: trampolinedLanguage },
 ];
 
 export function languageById(id: string): LanguageEntry | undefined {

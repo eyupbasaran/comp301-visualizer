@@ -142,8 +142,19 @@ function width(chars: number): number {
 }
 
 export function layoutEnv(trace: Trace, position: number): Diagram {
-  const step = trace.steps[position];
-  if (!step || step.kind === 'apply-cont') return EMPTY_DIAGRAM;
+  const real = trace.steps[position];
+  if (!real) return EMPTY_DIAGRAM;
+  // apply-cont has no env of its own: draw the env its continuation frame saved, if it has one.
+  let step: EnvStep;
+  let caption = 'env of this step';
+  if (real.kind === 'apply-cont') {
+    const saved = (real.cont as { savedEnv?: Env }).savedEnv;
+    if (!saved) return EMPTY_DIAGRAM;
+    step = { ...real, kind: 'value-of', exp: null as unknown as AstNode, env: saved };
+    caption = `env saved in ${real.cont.kind}`;
+  } else {
+    step = real;
+  }
   const { names, initIds } = frameNames(trace);
   const store = storeAt(trace, position);
 
@@ -210,7 +221,7 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
   // A nameless env has no names: each frame shows its position in this step's
   // env (#0 is the newest), which is the n of %lexref n.
   const slot = new Map(framesOf(step.env).map((f, i) => [f.id, i]));
-  const exp = step.exp as unknown as { kind: string; var?: string; n?: bigint };
+  const exp = (step.exp ?? { kind: 'none' }) as unknown as { kind: string; var?: string; n?: bigint };
   // The binding apply-env finds at this step: a variable, or the target of set.
   const found =
     exp.kind === 'var-exp' || exp.kind === 'assign-exp'
@@ -305,7 +316,7 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
   const at = (node: Node) => ({ x: colX[node.col], y: rowY[node.depth], w: frameW[node.col] });
 
   // 6. Cards, then arrows.
-  const running = runningClosure(step, closures);
+  const running = step.exp ? runningClosure(step, closures) : null;
   const runningKey = running?.closure.key ?? null;
   const cards: DiagramCard[] = all.map((node) => {
     const { x, y, w } = at(node);
@@ -319,7 +330,7 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
       name: label(node),
       parts: partsOf(node),
       emphasis: node === current ? 'current' : node.onChain ? 'chain' : 'muted',
-      caption: node === current ? 'env of this step' : null,
+      caption: node === current ? caption : null,
     };
   });
   for (const c of closures) {

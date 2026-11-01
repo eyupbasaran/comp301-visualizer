@@ -37,7 +37,11 @@ interface StepBase {
    * context), or -1. Always -1 in the CPS languages.
    */
   readonly parent: number;
-  /** How many value-of calls were still running when this one started. */
+  /**
+   * How many value-of calls were still running when this one started. In the
+   * CPS languages: how many frames the continuation has above end-cont, the
+   * size of the control context.
+   */
   readonly depth: number;
   /** trace.events.length when the step started: the store here is events[0, eventIndex) replayed. */
   readonly eventIndex: number;
@@ -62,8 +66,8 @@ export interface ValueOfKStep extends StepBase {
   readonly exp: AstNode;
   readonly env: Env;
   readonly cont: Cont;
-  /** The value that eventually reaches `cont`, if the language fills it in. */
-  result?: ExpVal;
+  /** TRAMPOLINED: this step is the first after the trampoline called a bounce. */
+  readonly bounced?: boolean;
 }
 
 /** (apply-cont cont val) */
@@ -109,6 +113,13 @@ export const DEFAULT_DEPTH_LIMIT = 1_000;
 
 class LimitReached extends Error {}
 
+/** Frames above end-cont. */
+function contSize(cont: Cont): number {
+  let n = 0;
+  for (let c = cont.savedCont; c; c = c.savedCont) n++;
+  return n;
+}
+
 /**
  * Everything an interpreter needs to leave a trace: step recording, the store,
  * and constructors for objects that get an id (env frames, procedures, thunks,
@@ -122,6 +133,7 @@ export class Recorder {
   private nextId = 0;
   /** value-of calls that have started but not returned, innermost last. */
   private readonly open: number[] = [];
+  private bounced = false;
   private readonly stepLimit: number;
   private readonly depthLimit: number;
 
@@ -177,14 +189,17 @@ export class Recorder {
   /** value-of/k was called: one step. */
   valueOfK(exp: AstNode, env: Env, cont: Cont): void {
     const index = this.startStep();
+    const bounced = this.bounced;
+    this.bounced = false;
     this.steps.push({
       kind: 'value-of/k',
       index,
       exp,
       env,
       cont,
+      ...(bounced ? { bounced } : {}),
       parent: -1,
-      depth: 0,
+      depth: contSize(cont),
       eventIndex: this.events.length,
       idCount: this.nextId,
     });
@@ -199,10 +214,15 @@ export class Recorder {
       cont,
       val,
       parent: -1,
-      depth: 0,
+      depth: contSize(cont),
       eventIndex: this.events.length,
       idCount: this.nextId,
     });
+  }
+
+  /** TRAMPOLINED: the trampoline is calling a bounce. The next step is marked. */
+  bounce(): void {
+    this.bounced = true;
   }
 
   private startStep(): number {
