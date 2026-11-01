@@ -16,6 +16,8 @@ import { bookValue } from './format';
 import { StepBar } from './StepBar';
 import { Splitter, useStoredSize } from './Splitter';
 import { StepBox } from './StepBox';
+import { layoutStore } from './storeLayout';
+import { StorePanel } from './StorePanel';
 import { ThemeToggle } from './ThemeToggle';
 import { TracePanel } from './TracePanel';
 import { TranslationView } from './TranslationView';
@@ -23,6 +25,7 @@ import { TranslationView } from './TranslationView';
 const START = { language: 'proc', example: 2 };
 const PROGRAM_WIDTH = 460;
 const LOWER_HEIGHT = 290;
+const STORE_WIDTH = 330;
 
 // Views that share the lower right panel. The state panels (env, store, cont) are never tabs.
 type LowerView = 'trace' | 'ast' | 'contour' | 'translation';
@@ -57,8 +60,10 @@ export default function App() {
   // Sizes the viewer set with the drag handles.
   const [programWidth, setProgramWidth] = useStoredSize('comp301.programWidth', PROGRAM_WIDTH);
   const [lowerHeight, setLowerHeight] = useStoredSize('comp301.lowerHeight', LOWER_HEIGHT);
+  const [storeWidth, setStoreWidth] = useStoredSize('comp301.storeWidth', STORE_WIDTH);
   const workspace = useRef<HTMLElement>(null);
   const panels = useRef<HTMLElement>(null);
+  const stateRow = useRef<HTMLDivElement>(null);
   const workspaceWidth = workspace.current?.clientWidth ?? 1440;
   const panelsHeight = panels.current?.clientHeight ?? 760;
 
@@ -76,6 +81,8 @@ export default function App() {
   const count = trace ? trace.steps.length : 0;
   const state = useMemo(() => (trace ? stateAt(trace, position) : null), [trace, position]);
   const diagram = useMemo(() => (trace ? layoutEnv(trace, position) : null), [trace, position]);
+  const hasStore = language.panels.includes('store');
+  const storeRows = useMemo(() => (trace && hasStore ? layoutStore(trace, position) : null), [trace, hasStore, position]);
   const views = LOWER_VIEWS.filter((v) => language.panels.includes(v.id));
   const view = views.some((v) => v.id === lower) ? lower : (views[0]?.id ?? 'trace');
   const ast = useMemo(
@@ -175,7 +182,13 @@ export default function App() {
       <main
         className="workspace"
         ref={workspace}
-        style={{ '--program-width': `${programWidth}px`, '--lower-height': `${lowerHeight}px` } as CSSProperties}
+        style={
+          {
+            '--program-width': `${programWidth}px`,
+            '--lower-height': `${lowerHeight}px`,
+            '--store-width': `${storeWidth}px`,
+          } as CSSProperties
+        }
       >
         <section className="program">
           <h2 className="label">Program</h2>
@@ -216,16 +229,44 @@ export default function App() {
 
         <section className={stale ? 'panels stale' : 'panels'} ref={panels}>
           {language.panels.includes('env') && (
-            <div className="panel panel-env">
-              <div className="panel-head">
-                <h2>Environment</h2>
-                <span className="label">newest frame first; bold boxes are the env of this step</span>
-                <EnvHelp />
+            <div className="state-row" ref={stateRow}>
+              <div className="panel panel-env">
+                <div className="panel-head">
+                  <h2>Environment</h2>
+                  <span className="label">newest frame first; bold boxes are the env of this step</span>
+                  <EnvHelp />
+                </div>
+                {diagram && diagram.cards.length > 0 ? (
+                  <EnvDiagram diagram={diagram} />
+                ) : (
+                  <p className="step-note">{trace ? 'The run has ended.' : 'Fix the program to see its environment.'}</p>
+                )}
               </div>
-              {diagram && diagram.cards.length > 0 ? (
-                <EnvDiagram diagram={diagram} />
-              ) : (
-                <p className="step-note">{trace ? 'The run has ended.' : 'Fix the program to see its environment.'}</p>
+              {hasStore && (
+                <>
+                  <Splitter
+                    orientation="vertical"
+                    label="Store width"
+                    value={storeWidth}
+                    min={220}
+                    max={Math.max(220, (stateRow.current?.clientWidth ?? 900) - 300)}
+                    growKey="ArrowLeft"
+                    onChange={setStoreWidth}
+                    toValue={(x) => (stateRow.current?.getBoundingClientRect().right ?? 0) - x}
+                    onReset={() => setStoreWidth(STORE_WIDTH)}
+                  />
+                  <div className="panel panel-store">
+                    <div className="panel-head">
+                      <h2>Store</h2>
+                      <span className="label">outlined: what this step uses</span>
+                    </div>
+                    {storeRows ? (
+                      <StorePanel rows={storeRows} />
+                    ) : (
+                      <p className="step-note">Fix the program to see its store.</p>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           )}

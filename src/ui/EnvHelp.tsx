@@ -3,14 +3,17 @@
 // the guide can never show something the tool would not.
 
 import { useMemo, useRef, useState } from 'react';
-import { runSource } from '../core/language';
+import { runSource, type LanguageModule } from '../core/language';
 import type { Step, Trace } from '../core/trace';
+import { implicitRefsLanguage } from '../languages/implicit-refs';
 import { procLanguage } from '../languages/proc';
 import { EnvDiagram } from './EnvDiagram';
 import { EMPTY_DIAGRAM, layoutEnv, type Diagram } from './envLayout';
 import { equation, explain } from './format';
 
 interface Example {
+  /** PROC unless said otherwise. */
+  readonly language?: LanguageModule;
   readonly source: string;
   /** The step to draw. */
   readonly pick: (step: Step, trace: Trace) => boolean;
@@ -22,9 +25,10 @@ const isVar = (name: string) => (step: Step, trace: Trace) =>
 
 export const LOOKUP_EXAMPLE: Example = { source: 'let x = 3\nin let y = 4\n   in -(x, y)', pick: isVar('x') };
 export const CALL_EXAMPLE: Example = { source: 'let a = 5\nin let f = proc (z) -(z, a)\n   in (f 1)', pick: isVar('a') };
+export const LOCATION_EXAMPLE: Example = { ...CALL_EXAMPLE, language: implicitRefsLanguage };
 
 export function draw(example: Example): { diagram: Diagram; call: string; note: string | null } {
-  const result = runSource(procLanguage, example.source);
+  const result = runSource(example.language ?? procLanguage, example.source);
   if (!result.ok) return { diagram: EMPTY_DIAGRAM, call: '', note: null };
   const index = result.trace.steps.findIndex((s) => example.pick(s, result.trace));
   const step = result.trace.steps[index];
@@ -115,6 +119,16 @@ export function EnvHelp() {
               is static scoping. <i>running</i> marks the closure whose body is being evaluated.
             </p>
             {open && <ExampleFigure example={CALL_EXAMPLE} title="Inside the call (f 1), at the a in -(z, a)" />}
+          </section>
+
+          <section>
+            <h3>Locations</h3>
+            <p>
+              From IMPLICIT-REFS on, a frame binds a name to a store location, not to a value: <code>a → 3</code> means the
+              value of <code>a</code> is in location 3 of the Store panel. A closure kept in a location is still drawn next to
+              the frame, marked with that location (<code>4: procedure z …</code>).
+            </p>
+            {open && <ExampleFigure example={LOCATION_EXAMPLE} title="The same call in IMPLICIT-REFS" />}
           </section>
 
           <section>

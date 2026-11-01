@@ -56,6 +56,10 @@ describe('stateAt', () => {
     expect(stateAt(trace, 2).changes.map((e) => e.kind)).toEqual(['newref', 'deref']);
   });
 
+  it('gives each store event the step that owns it: the innermost running value-of call', () => {
+    expect(trace.events.map((e) => `${e.kind} ${e.owner}`)).toEqual(['newref -1', 'setref 0', 'newref 1', 'deref 0']);
+  });
+
   it('gives the running value-of calls', () => {
     expect(stateAt(trace, 0).stack.map((s) => s.index)).toEqual([0]);
     expect(stateAt(trace, 1).stack.map((s) => s.index)).toEqual([0, 1]);

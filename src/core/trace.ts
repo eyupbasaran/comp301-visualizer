@@ -133,7 +133,7 @@ export class Recorder {
     this.depthLimit = options.depthLimit ?? DEFAULT_DEPTH_LIMIT;
     this.store = new Store(
       (event) => this.events.push(event),
-      () => this.steps.length - 1,
+      () => (this.open.length > 0 ? this.open[this.open.length - 1] : this.steps.length - 1),
     );
   }
 

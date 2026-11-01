@@ -4,6 +4,7 @@
 import { sourceOf } from '../core/ast';
 import type { Env, Frame } from '../core/env';
 import { framesOf } from '../core/env';
+import type { StoreEvent } from '../core/store';
 import type { Step, Trace, ValueOfStep } from '../core/trace';
 import type { DenVal, ExpVal, StoreVal } from '../core/values';
 
@@ -73,8 +74,41 @@ export function bookValue(v: StoreVal): string {
     case 'ref-val':
       return `(ref-val ${v.ref})`;
     case 'mutpair-val':
-      return `(mutpair-val ${v.p.leftLoc} ${v.p.rightLoc})`;
+      return `(a-pair ${v.p.leftLoc} ${v.p.rightLoc})`;
   }
+}
+
+/** A value in a store cell: 200, #t, (procedure x …), (a-pair 3 4), (a-thunk «-(x,1)» ρ2). */
+export function storeValue(trace: Trace, v: StoreVal): string {
+  if ('kind' in v) {
+    const exp = sourceOf(trace.program, v.exp1).replace(/\s+/g, ' ').trim();
+    return `(a-thunk «${exp.length > 18 ? exp.slice(0, 17) + '…' : exp}» ${envName(trace, v.env)})`;
+  }
+  return v.tag === 'num-val' || v.tag === 'bool-val' ? boxValue(v) : bookValue(v);
+}
+
+/** True when the env binds names to store locations (IMPLICIT-REFS and after), not to values. */
+export function bindsLocations(trace: Trace): boolean {
+  const first = trace.steps[0];
+  if (!first || first.kind === 'apply-cont') return false;
+  return framesOf(first.env).some((f) => f.kind === 'extend-env' && typeof f.bval === 'number');
+}
+
+const ownCache = new WeakMap<Trace, Map<number, StoreEvent[]>>();
+
+/** The store events a step did itself, not inside the value-of calls it made, in order. */
+export function ownEvents(trace: Trace, step: Step): readonly StoreEvent[] {
+  let byOwner = ownCache.get(trace);
+  if (!byOwner) {
+    byOwner = new Map();
+    for (const e of trace.events) {
+      const list = byOwner.get(e.owner);
+      if (list) list.push(e);
+      else byOwner.set(e.owner, [e]);
+    }
+    ownCache.set(trace, byOwner);
+  }
+  return byOwner.get(step.index) ?? [];
 }
 
 /** A value inside an env box: 200, #t, ● (a pointer to a closure drawn next to it). */
@@ -125,6 +159,7 @@ export function explain(trace: Trace, step: Step): string | null {
   const exp = step.exp as unknown as Record<string, unknown> & { kind: string };
   const rho = envName(trace, step.env);
   const [first, second, third] = subSteps(trace, step);
+  const own = ownEvents(trace, step);
   const value = (s: ValueOfStep | undefined) => (s?.result ? bookValue(s.result) : null);
   switch (exp.kind) {
     case 'var-exp':
@@ -152,6 +187,10 @@ export function explain(trace: Trace, step: Step): string | null {
     }
     case 'let-exp': {
       const bound = value(first);
+      const alloc = own.find((e) => e.kind === 'newref');
+      if (bound && second && alloc) {
+        return `${bound} goes into a new location, ${alloc.loc}, and a new frame ${envName(trace, second.env)} binds ${exp.var as string} to it, on top of ${rho}; the body runs there.`;
+      }
       if (bound && second) {
         return `${exp.var as string} = ${bound} goes into a new frame ${envName(trace, second.env)} on top of ${rho}; the body runs there.`;
       }
@@ -165,19 +204,83 @@ export function explain(trace: Trace, step: Step): string | null {
       if (proc && arg && third) {
         const saved = envName(trace, proc.savedEnv);
         const caller = saved === rho ? '' : `, not the caller's ${rho}`;
+        const frame = envName(trace, third.env);
+        // From IMPLICIT-REFS on, the argument goes into a new location first.
+        const alloc = own.find((e) => e.kind === 'newref');
+        if (alloc && proc.bvar !== null) {
+          return `Calls (procedure ${proc.bvar} …) with ${arg}, which goes into a new location, ${alloc.loc}. The body runs in a new frame ${frame} (${proc.bvar} → ${alloc.loc}) on top of the closure's saved env ${saved}${caller}.`;
+        }
         // A nameless procedure has no parameter name; its argument is just the new #0.
         const head = proc.bvar === null ? `Calls (procedure …) with ${arg}` : `Calls (procedure ${proc.bvar} …) with ${proc.bvar} = ${arg}`;
-        return `${head}. The body runs in a new frame ${envName(trace, third.env)} on top of the closure's saved env ${saved}${caller}.`;
+        return `${head}. The body runs in a new frame ${frame} on top of the closure's saved env ${saved}${caller}.`;
       }
       return "The operator is evaluated, then the operand. The body then runs in the closure's saved env, extended with the parameter.";
     }
     case 'letrec-exp': {
-      const name = exp.pName as string;
+      // LETREC binds one procedure (pName); the chapter 4 languages bind several (pNames).
+      const names = Array.isArray(exp.pNames) ? (exp.pNames as string[]) : [exp.pName as string];
+      const subject = names.length === 1 ? `${names[0]} is` : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]} are`;
+      const them = names.length === 1 ? names[0] : 'them';
       if (first) {
         const frame = envName(trace, first.env);
-        return `${name} is bound recursively in a new frame ${frame} on top of ${rho}; the body runs there. Each lookup of ${name} makes a new closure whose saved env is ${frame} itself.`;
+        const each = bindsLocations(trace)
+          ? `Each lookup of ${them} puts a new closure, whose saved env is ${frame} itself, into a new location.`
+          : `Each lookup of ${them} makes a new closure whose saved env is ${frame} itself.`;
+        return `${subject} bound recursively in a new frame ${frame} on top of ${rho}; the body runs there. ${each}`;
       }
-      return `${name} is bound recursively in a new frame on top of ${rho}; the body runs there.`;
+      return `${subject} bound recursively in a new frame on top of ${rho}; the body runs there.`;
+    }
+    case 'begin-exp': {
+      const count = 1 + (exp.exps as unknown[]).length;
+      const last = value(subSteps(trace, step)[count - 1]);
+      if (last) return `The ${count} expressions run in order; the value of the last one, ${last}, is the value of the begin.`;
+      return `The ${count} expressions run in order; the value of the last one is the value of the begin.`;
+    }
+    case 'newref-exp': {
+      const alloc = own.find((e) => e.kind === 'newref');
+      if (alloc && step.result) return `${bookValue(alloc.val)} goes into a new location, ${alloc.loc}; newref returns ${bookValue(step.result)}.`;
+      return 'The operand is evaluated, then put into a new location.';
+    }
+    case 'deref-exp': {
+      const read = own.find((e) => e.kind === 'deref');
+      if (read && step.result) return `Reads location ${read.loc}, which holds ${bookValue(step.result)}.`;
+      return 'The operand must be a reference; deref reads its location.';
+    }
+    case 'setref-exp': {
+      const write = own.find((e) => e.kind === 'setref');
+      if (write?.kind === 'setref') return `Writes ${bookValue(write.val)} into location ${write.loc}, replacing ${bookValue(write.old)}; setref returns ⌈23⌉.`;
+      return 'The first operand must be a reference; the second is written into its location.';
+    }
+    case 'assign-exp': {
+      const write = own.find((e) => e.kind === 'setref');
+      const name = exp.var as string;
+      if (write?.kind === 'setref') {
+        return `${name} is bound to location ${write.loc}; set writes ${bookValue(write.val)} there, replacing ${bookValue(write.old)}, and returns ⌈27⌉.`;
+      }
+      return `set evaluates the right-hand side and writes it into the location ${name} is bound to.`;
+    }
+    case 'newpair-exp': {
+      const [l, r] = own.filter((e) => e.kind === 'newref');
+      if (l?.kind === 'newref' && r?.kind === 'newref') {
+        return `${bookValue(l.val)} and ${bookValue(r.val)} go into two new locations, ${l.loc} and ${r.loc}; the pair (a-pair ${l.loc} ${r.loc}) holds them.`;
+      }
+      return 'Both operands are evaluated, then each goes into a new location.';
+    }
+    case 'left-exp':
+    case 'right-exp': {
+      const side = exp.kind === 'left-exp' ? 'left' : 'right';
+      const read = own.find((e) => e.kind === 'deref');
+      if (read && step.result) return `Reads the pair's ${side} location, ${read.loc}, which holds ${bookValue(step.result)}.`;
+      return `The operand must be a pair; ${side} reads its ${side} location.`;
+    }
+    case 'setleft-exp':
+    case 'setright-exp': {
+      const side = exp.kind === 'setleft-exp' ? 'left' : 'right';
+      const write = own.find((e) => e.kind === 'setref');
+      if (write?.kind === 'setref') {
+        return `Writes ${bookValue(write.val)} into the pair's ${side} location, ${write.loc}, replacing ${bookValue(write.old)}; set${side} returns ${side === 'left' ? '⌈82⌉' : '⌈83⌉'}.`;
+      }
+      return `Both operands are evaluated; the first must be a pair, and the second is written into its ${side} location.`;
     }
     case 'nameless-var-exp':
       return explainAddress(trace, step, Number(exp.n as bigint));
@@ -238,7 +341,16 @@ function explainLookup(trace: Trace, step: ValueOfStep, name: string): string {
         // apply-env on a letrec frame makes a new closure on every lookup.
         const proc = step.result ? ` ${sentenceValue(step.result)}` : '';
         const where = misses.length === 0 ? `${name} is bound by letrec in ${here}` : `${name} is not bound in ${misses.join(', ')}, so the lookup goes on to ${here}, where letrec binds it`;
+        // From IMPLICIT-REFS on, the new closure also goes into a new location.
+        const alloc = ownEvents(trace, step).find((e) => e.kind === 'newref');
+        if (alloc) return `${where}. This lookup puts a new closure${proc}, whose saved env is ${here}, into a new location, ${alloc.loc}.`;
         return `${where}. This lookup makes a new closure${proc} whose saved env is ${here}.`;
+      }
+      if (typeof frame.bval === 'number') {
+        // The env holds a location; the value is in the store.
+        const holds = step.result ? `, which holds ${sentenceValue(step.result)}` : '';
+        if (misses.length === 0) return `${name} is bound in ${here} to location ${frame.bval}${holds}.`;
+        return `${name} is not bound in ${misses.join(', ')}, so the lookup goes on to ${here}, where ${name} → ${frame.bval}${holds}.`;
       }
       const value = step.result ? ` = ${sentenceValue(step.result)}` : '';
       if (misses.length === 0) return `${name} is bound in ${here}: ${name}${value}.`;

@@ -416,6 +416,7 @@ input {
 .env-card.closure {
   border-style: dashed;
   border-width: 1px;
+  line-height: 20px;
 }
 
 .env-card.closure.current {
@@ -451,6 +452,114 @@ input {
   line-height: 16px;
   color: var(--accent);
   white-space: nowrap;
+}
+
+/* ---- environment and store, side by side ---- */
+
+.state-row {
+  display: flex;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--ink);
+}
+
+.state-row > .panel {
+  border-bottom: 0;
+}
+
+.panel-env {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.panel-store {
+  flex: 0 1 var(--store-width, 330px);
+  min-width: 0;
+  border-left: 1px solid var(--ink);
+}
+
+/* ---- store ---- */
+
+/* A ledger: location, value, the names that point at it, what this step does to it. */
+.store {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--mono);
+  font-size: 14px;
+  overflow: auto;
+}
+
+.store-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 3ch minmax(0, auto) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--rule-faint);
+  white-space: nowrap;
+}
+
+.store-loc {
+  text-align: right;
+  color: var(--muted);
+}
+
+.store-val {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.store-names {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.store-does {
+  font-family: var(--serif);
+  font-size: 13px;
+  font-style: italic;
+  color: var(--muted);
+}
+
+/* Changed since the previous position: the highlighter, as on the current expression. */
+.store-row.changed .store-val {
+  background: linear-gradient(var(--mark), var(--mark)) no-repeat;
+  background-size: 100% 100%;
+  color: var(--ink);
+  padding: 0 3px;
+  margin: 0 -3px;
+}
+
+/* What this step itself does to a location. */
+.store-row.touched {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.store-row.touched .store-does {
+  color: var(--accent);
+}
+
+/* Made by this step, but not yet at this position. */
+.store-row.ghost {
+  outline-style: dashed;
+  color: var(--muted);
+}
+
+.store-row.gap {
+  margin-top: 14px;
+}
+
+.store-row.gap::before {
+  content: '⋮';
+  position: absolute;
+  top: -17px;
+  left: 2ch;
+  color: var(--muted);
 }
 
 /* ---- trace ---- */
@@ -1044,6 +1153,16 @@ input {
   .splitter {
     display: none;
   }
+
+  .panel-store {
+    flex: 1 1 100%;
+    border-left: 0;
+    border-top: 1px solid var(--ink);
+  }
+
+  .store {
+    max-height: 320px;
+  }
 }
 
 /* ---- step bar ---- */
@@ -1140,12 +1259,19 @@ input {
     overflow-y: auto;
   }
 
-  .panel-env {
+  .state-row {
     flex: 1 1 auto;
+    min-height: 140px;
+    flex-wrap: nowrap;
+  }
+
+  .panel-env,
+  .panel-store {
     min-height: 0;
   }
 
-  .panel-env .env-scroll {
+  .panel-env .env-scroll,
+  .panel-store .store {
     flex: 1 1 auto;
     min-height: 0;
   }
@@ -1161,9 +1287,6 @@ input {
     min-width: 420px;
   }
 
-  .panel-env {
-    min-height: 140px;
-  }
 
   /* The tabs stay put; only the list under them scrolls. */
   .panel-lower {

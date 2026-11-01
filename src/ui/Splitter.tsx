@@ -15,14 +15,14 @@ interface Props {
   /** The size for a pointer at this position. */
   toValue(clientX: number, clientY: number): number;
   /** Which arrow key makes the size bigger. */
-  growKey: 'ArrowRight' | 'ArrowUp';
+  growKey: 'ArrowRight' | 'ArrowLeft' | 'ArrowUp';
   onReset(): void;
 }
 
 export function Splitter({ orientation, label, value, min, max, onChange, toValue, growKey, onReset }: Props) {
   const dragging = useRef(false);
   const clamp = (v: number) => Math.round(Math.max(min, Math.min(max, v)));
-  const shrinkKey = growKey === 'ArrowRight' ? 'ArrowLeft' : 'ArrowDown';
+  const shrinkKey = { ArrowRight: 'ArrowLeft', ArrowLeft: 'ArrowRight', ArrowUp: 'ArrowDown' }[growKey];
 
   return (
     <div

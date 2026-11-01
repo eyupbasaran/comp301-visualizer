@@ -26,7 +26,7 @@ source ──parse──▶ AST ──run──▶ Trace ──stateAt(trace, po
   - `last`: the last step inside this call
   - `eventIndex`: how many store events happened before the step
   - `idCount`: objects with a larger id were made after the step started
-- `events`: the store log (`newref`, `deref`, `setref`). The store at any position is rebuilt from it.
+- `events`: the store log (`newref`, `deref`, `setref`). The store at any position is rebuilt from it. Each event has an `owner`: the step whose own work it is (the innermost `value-of` still running), so the Store panel can show what a step reads, writes or makes even when that happens after its sub-steps.
 - `outcome`: `value`, `error` (an `eopl:error`, worded as DrRacket prints it), `limit` (step or depth limit), or `crash` (our bug).
 - `openSteps`: the `value-of` calls that never returned, i.e. where an error happened.
 - Env frames, procedures, thunks and continuations are immutable and carry an `id`, so a step can keep a pointer to them and panels can draw shared objects once.
@@ -56,9 +56,9 @@ source ──parse──▶ AST ──run──▶ Trace ──stateAt(trace, po
 ## What the UI gives a new language for free
 
 - Once a language's `module` is set, it appears in the picker with its examples.
-- Without any UI work it gets: the editor highlight, the step box, the Environment diagram, Trace, AST, and Contour (for `let-exp`, `proc-exp` and `letrec-exp`).
-- A one-line explanation per step exists for the LET and PROC expressions (`explain` in `src/ui/format.ts`). New expression kinds show just the equation until a sentence is added there.
-- The Store and Continuation panels, and anything a language shows in its own way (thunks, pairs, the nameless translation), are UI work: say what your language needs.
+- Without any UI work it gets: the editor highlight, the step box, the Environment diagram, Trace, AST, Contour (for `let-exp`, `proc-exp` and `letrec-exp`), and the Store panel when `panels` has `'store'`.
+- A one-line explanation per step exists for every expression kind so far (`explain` in `src/ui/format.ts`). New expression kinds show just the equation until a sentence is added there.
+- The Continuation panel, and anything a language shows in its own way (thunks), are UI work: say what your language needs.
 
 ## Adding a language
 
