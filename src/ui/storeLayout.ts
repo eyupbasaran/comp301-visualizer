@@ -2,7 +2,8 @@
 // tested without a browser.
 //
 // Each row is a location and what it holds now, plus:
-//   - the names on this step's env chain that point at it (x → 3, or x = (ref-val 3));
+//   - the names on this step's env chain that point at it (x → 3, or x = (ref-val 3)),
+//     then those of the calls still running, with their frame: a (ρ2);
 //   - whether it changed since the previous position (new / set);
 //   - what this step does to it itself: reads it, writes it, or makes it. A
 //     location this step makes is not in the store yet, so it shows as a
@@ -11,7 +12,8 @@
 import { framesOf } from '../core/env';
 import { stateAt } from '../core/state';
 import type { Trace } from '../core/trace';
-import { ownEvents, storeValue } from './format';
+import type { DenVal } from '../core/values';
+import { frameNames, ownEvents, storeValue } from './format';
 
 export interface StoreRow {
   readonly loc: number;
@@ -30,19 +32,33 @@ export function layoutStore(trace: Trace, position: number): StoreRow[] {
   const state = stateAt(trace, position);
   const step = state.step;
 
-  // Names that point at a location: the binding apply-env would find for each name.
+  // Names that point at a location. First the bindings apply-env would find
+  // from this step; then the bindings of the calls still running, with their
+  // frame, so two names sharing a location (call-by-reference) both show.
   const names = new Map<number, string[]>();
+  const pointsAt = (v: DenVal) => (typeof v === 'number' ? v : v.tag === 'ref-val' ? v.ref : null);
+  const add = (loc: number | null, name: string) => {
+    if (loc !== null) names.set(loc, [...(names.get(loc) ?? []), name]);
+  };
   if (step && step.kind !== 'apply-cont') {
     const seen = new Set<string>();
-    for (const frame of framesOf(step.env)) {
+    const chain = framesOf(step.env);
+    for (const frame of chain) {
       if (frame.kind === 'extend-env-rec' || frame.kind === 'extend-env-rec*') {
         for (const p of frame.kind === 'extend-env-rec' ? [frame.pName] : frame.pNames) seen.add(p);
       }
       if (frame.kind !== 'extend-env' || seen.has(frame.bvar)) continue;
       seen.add(frame.bvar);
-      const v = frame.bval;
-      const loc = typeof v === 'number' ? v : v.tag === 'ref-val' ? v.ref : null;
-      if (loc !== null) names.set(loc, [...(names.get(loc) ?? []), frame.bvar]);
+      add(pointsAt(frame.bval), frame.bvar);
+    }
+    const { names: frameName } = frameNames(trace);
+    const done = new Set(chain.map((f) => f.id));
+    for (const call of [...state.stack].reverse()) {
+      for (const frame of framesOf(call.env)) {
+        if (done.has(frame.id)) break;
+        done.add(frame.id);
+        if (frame.kind === 'extend-env') add(pointsAt(frame.bval), `${frame.bvar} (${frameName.get(frame.id) ?? '?'})`);
+      }
     }
   }
 
