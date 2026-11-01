@@ -8,7 +8,7 @@ Languages, and the official EOPL3 folder each one is translated from:
 - NAMELESS: `chapter3/lexaddr-lang`
 - EXPLICIT-REFS: `chapter4/explicit-refs`
 - IMPLICIT-REFS: `chapter4/implicit-refs`
-- MUTABLE-PAIRS: `chapter4/mutable-pairs`, with the pairs of `pairval1.scm` (the representation the lectures teach first)
+- MUTABLE-PAIRS: `chapter4/mutable-pairs`, with the pairs of `pairval1.scm` (the representation the lectures teach first) or `pairval2.scm` (consecutive locations), picked next to the language
 - CALL-BY-REFERENCE: `chapter4/call-by-reference`
 - CALL-BY-NAME: no official folder (book section 4.5.2: call-by-need without memoization)
 - CALL-BY-NEED: `chapter4/call-by-need`

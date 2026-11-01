@@ -1,5 +1,7 @@
-// Port of chapter4/mutable-pairs/interp.scm, with the pairs of pairval1.scm
-// ((a-pair left-loc right-loc), the representation the lectures teach first).
+// Port of chapter4/mutable-pairs/interp.scm. The pairs are those of
+// pairval1.scm ((a-pair left-loc right-loc), the representation the lectures
+// teach first) or of pairval2.scm (two consecutive locations, the one the
+// official pairvals.scm picks), whichever the caller asks for.
 // Same clauses, same evaluation order. Each value-of call is one step.
 // apply-procedure is not a step; the value-of on the procedure body is.
 //
@@ -9,6 +11,7 @@
 
 import type { Program } from '../../core/ast';
 import type { Env } from '../../core/env';
+import { pairOps, type PairVal } from '../../core/pairvals';
 import { record, type RunOptions, type Trace } from '../../core/trace';
 import {
   boolVal,
@@ -20,29 +23,19 @@ import {
   numVal,
   procVal,
   type ExpVal,
-  type MutPair,
   type Proc,
 } from '../../core/values';
 import { applyEnv, initEnv } from './environments';
 import type { AProgram, Expression } from './lang';
 
 // value-of-program : Program -> ExpVal
-export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Trace {
+export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions, pairval: PairVal = 'pairval1'): Trace {
   return record(pgm, options, (rec) => {
     // Only ExpVals are ever stored in this language.
     const deref = (ref: number) => rec.store.deref(ref) as ExpVal;
 
-    // pairval1.scm
-    // make-pair : ExpVal * ExpVal -> MutPair
-    const makePair = (val1: ExpVal, val2: ExpVal): MutPair => {
-      const leftLoc = rec.store.newref(val1);
-      const rightLoc = rec.store.newref(val2);
-      return { kind: 'a-pair', leftLoc, rightLoc };
-    };
-    const left = (p: MutPair) => deref(p.leftLoc);
-    const right = (p: MutPair) => deref(p.rightLoc);
-    const setleft = (p: MutPair, val: ExpVal) => rec.store.setref(p.leftLoc, val);
-    const setright = (p: MutPair, val: ExpVal) => rec.store.setref(p.rightLoc, val);
+    // pairvals.scm: the pairs of pairval1.scm or of pairval2.scm.
+    const { makePair, left, right, setleft, setright } = pairOps(pairval, rec.store);
 
     // value-of : Exp * Env -> ExpVal
     function valueOf(exp: Expression, env: Env): ExpVal {

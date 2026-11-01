@@ -41,6 +41,7 @@ source ──parse──▶ AST ──run──▶ Trace ──stateAt(trace, po
   - `scanner.ts`, `grammar.ts`: SLLGEN-style scanner and LL(1) parser
   - `values.ts`: ExpVal, procedures, thunks, extractors
   - `env.ts`, `store.ts`: environment frames, the store
+  - `pairvals.ts`: the two representations of mutable pairs (`pairval1.scm`, `pairval2.scm`)
   - `trace.ts`: Step, Trace, Recorder
   - `state.ts`: `stateAt`
   - `print.ts`: text forms (`(num-val 3)`, env->list)
@@ -50,7 +51,7 @@ source ──parse──▶ AST ──run──▶ Trace ──stateAt(trace, po
   - `environments.ts`: `init-env`, `apply-env`
   - `interp.ts`: `value-of`
   - `index.ts`: the `LanguageModule`
-- `src/languages/index.ts`: the picker's list
+- `src/languages/index.ts`: the picker's list. When the official code has more than one implementation of a language, `variants` lists them all (MUTABLE-PAIRS: `pairval1`, `pairval2`); a second select next to the language picks one, and the official tests run on each.
 - `src/ui/`: the web page (React). It only reads the trace.
 - `tests/`: Vitest
 

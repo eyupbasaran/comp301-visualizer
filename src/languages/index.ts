@@ -9,7 +9,7 @@ import { explicitRefsLanguage } from './explicit-refs';
 import { implicitRefsLanguage } from './implicit-refs';
 import { letLanguage } from './let';
 import { letrecLanguage } from './letrec';
-import { mutablePairsLanguage } from './mutable-pairs';
+import { mutablePairsLanguage, mutablePairsPairval2Language } from './mutable-pairs';
 import { namelessLanguage } from './nameless';
 import { procLanguage } from './proc';
 import { trampolinedLanguage } from './trampolined';
@@ -18,6 +18,11 @@ export interface LanguageEntry {
   readonly id: LanguageId;
   readonly name: string;
   readonly module: LanguageModule | null;
+  /**
+   * When the official code has more than one implementation of the language:
+   * what the picker calls the choice, and every implementation, `module` first.
+   */
+  readonly variants?: { readonly label: string; readonly modules: readonly LanguageModule[] };
 }
 
 export const LANGUAGES: readonly LanguageEntry[] = [
@@ -27,7 +32,12 @@ export const LANGUAGES: readonly LanguageEntry[] = [
   { id: 'nameless', name: 'NAMELESS', module: namelessLanguage },
   { id: 'explicit-refs', name: 'EXPLICIT-REFS', module: explicitRefsLanguage },
   { id: 'implicit-refs', name: 'IMPLICIT-REFS', module: implicitRefsLanguage },
-  { id: 'mutable-pairs', name: 'MUTABLE-PAIRS', module: mutablePairsLanguage },
+  {
+    id: 'mutable-pairs',
+    name: 'MUTABLE-PAIRS',
+    module: mutablePairsLanguage,
+    variants: { label: 'Pairs', modules: [mutablePairsLanguage, mutablePairsPairval2Language] },
+  },
   { id: 'call-by-reference', name: 'CALL-BY-REFERENCE', module: callByReferenceLanguage },
   { id: 'call-by-name', name: 'CALL-BY-NAME', module: callByNameLanguage },
   { id: 'call-by-need', name: 'CALL-BY-NEED', module: callByNeedLanguage },

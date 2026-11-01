@@ -6,7 +6,7 @@ import { runSource, type LanguageModule } from '../../src/core/language';
 import type { Trace } from '../../src/core/trace';
 import { explicitRefsLanguage } from '../../src/languages/explicit-refs';
 import { implicitRefsLanguage } from '../../src/languages/implicit-refs';
-import { mutablePairsLanguage } from '../../src/languages/mutable-pairs';
+import { mutablePairsLanguage, mutablePairsPairval2Language } from '../../src/languages/mutable-pairs';
 import { draw, LOCATION_EXAMPLE } from '../../src/ui/EnvHelp';
 import { layoutEnv } from '../../src/ui/envLayout';
 import { explain } from '../../src/ui/format';
@@ -141,6 +141,39 @@ describe('MUTABLE-PAIRS', () => {
     expect(says(pairs, 1)).toBe('⌈22⌉ and ⌈33⌉ go into two new locations, 3 and 4; the pair (a-pair 3 4) holds them.');
     expect(says(pairs, at('setleft-exp'))).toBe("Writes ⌈77⌉ into the pair's left location, 3, replacing ⌈22⌉; setleft returns ⌈82⌉.");
     expect(says(pairs, at('left-exp'))).toBe("Reads the pair's left location, 3, which holds ⌈77⌉.");
+  });
+
+  describe('with pairval2', () => {
+    const source = 'let p = newpair(22,33) in begin setleft p = 77; setright p = 44; -(left(p), right(p)) end';
+    const trace = run(mutablePairsPairval2Language, source);
+    const step = (kind: string) => trace.steps.findIndex((s) => s.kind === 'value-of' && s.exp.kind === kind);
+
+    it('explains that a pair is the location of its left element, with the right one next to it', () => {
+      expect(says(trace, 1)).toBe('⌈22⌉ and ⌈33⌉ go into two new locations, 3 and 4; the pair is a reference to the first one: (mutpair-val 3).');
+      expect(says(trace, step('setleft-exp'))).toBe('The pair is location 3; setleft writes ⌈77⌉ there, replacing ⌈22⌉, and returns ⌈82⌉.');
+      expect(says(trace, step('setright-exp'))).toBe(
+        'The pair is location 3; setright writes ⌈44⌉ into the next one, 3 + 1 = 4, replacing ⌈33⌉, and returns ⌈83⌉.',
+      );
+      expect(says(trace, step('left-exp'))).toBe('The pair is location 3, which holds its left element, ⌈77⌉.');
+      expect(says(trace, step('right-exp'))).toBe('The pair is location 3; its right element is in the next one, 3 + 1 = 4, which holds ⌈44⌉.');
+    });
+
+    it('keeps the bare location in the store, and prints it the way Racket does', () => {
+      expect(ledger(trace, 4)).toEqual(['0:1 ←i', '1:5 ←v', '2:10 ←x', '3:22 [new]', '4:33 [new]', '5:(mutpair-val 3) ←p [new]']);
+      expect(run(mutablePairsPairval2Language, '-(newpair(1,2), 1)').outcome).toEqual({
+        kind: 'error',
+        message: 'expval-extractors: Looking for a num, found #(struct:mutpair-val 3)',
+      });
+    });
+
+    it('takes the same steps to the same values as pairval1', () => {
+      for (const { source } of mutablePairsLanguage.examples) {
+        const one = run(mutablePairsLanguage, source);
+        const two = run(mutablePairsPairval2Language, source);
+        expect(two.steps.length).toBe(one.steps.length);
+        expect(two.outcome).toEqual(one.outcome);
+      }
+    });
   });
 
   it('checks a diff operand right after evaluating it', () => {
