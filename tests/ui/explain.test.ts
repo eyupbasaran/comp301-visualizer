@@ -48,6 +48,6 @@ describe('step explanations', () => {
 
   it('falls back to a general sentence when the run stopped inside the step', () => {
     const stopped = run(letLanguage, '-(1, foo)');
-    expect(explain(stopped, stopped.steps[0])).toBe('Both operands are evaluated first, then subtracted.');
+    expect(explain(stopped, stopped.steps[0])).toBe('The operands are evaluated left to right, then subtracted.');
   });
 });

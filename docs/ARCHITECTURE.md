@@ -31,6 +31,7 @@ source ──parse──▶ AST ──run──▶ Trace ──stateAt(trace, po
 - `openSteps`: the `value-of` calls that never returned, i.e. where an error happened.
 - Env frames, procedures, thunks and continuations are immutable and carry an `id`, so a step can keep a pointer to them and panels can draw shared objects once.
 - `stateAt(trace, position)` gives a panel everything for one position: the step, the store, what changed, the running calls.
+- A language that translates before it runs (NAMELESS) puts the translated program in `trace.program` (its `source` is the translated text, so the trace shows `%lexref 1`) and maps each node back to the student's code with `program.originSpans`. The editor highlight and the Contour panel use the student's code.
 
 ## Folders
 

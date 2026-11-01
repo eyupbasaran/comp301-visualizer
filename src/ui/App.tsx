@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { originSpan } from '../core/ast';
 import { runSource, type LanguageModule, type RunResult } from '../core/language';
 import { stateAt } from '../core/state';
 import type { Outcome } from '../core/trace';
@@ -17,17 +18,19 @@ import { Splitter, useStoredSize } from './Splitter';
 import { StepBox } from './StepBox';
 import { ThemeToggle } from './ThemeToggle';
 import { TracePanel } from './TracePanel';
+import { TranslationView } from './TranslationView';
 
 const START = { language: 'proc', example: 2 };
 const PROGRAM_WIDTH = 460;
 const LOWER_HEIGHT = 290;
 
 // Views that share the lower right panel. The state panels (env, store, cont) are never tabs.
-type LowerView = 'trace' | 'ast' | 'contour';
+type LowerView = 'trace' | 'ast' | 'contour' | 'translation';
 const LOWER_VIEWS: readonly { id: LowerView; title: string }[] = [
   { id: 'trace', title: 'Trace' },
   { id: 'ast', title: 'AST' },
   { id: 'contour', title: 'Contour' },
+  { id: 'translation', title: 'Translation' },
 ];
 
 function moduleById(id: string): LanguageModule {
@@ -79,15 +82,20 @@ export default function App() {
     () => (trace && state && view === 'ast' ? layoutAst(trace.program, trace, state) : null),
     [trace, state, view],
   );
-  const scopes = useMemo(() => (trace && view === 'contour' ? analyzeScopes(trace.program) : null), [trace, view]);
+  // The student's own program. Usually the trace runs on it; NAMELESS runs on its translation.
+  const studentProgram = result.ok ? result.program : null;
+  const scopes = useMemo(
+    () => (studentProgram && view === 'contour' ? analyzeScopes(studentProgram) : null),
+    [studentProgram, view],
+  );
   const step = state?.step;
-  const current = !stale && step && step.kind !== 'apply-cont' ? step.exp.span : null;
+  // Where this step's expression is in the student's source.
+  const stepSpan = trace && step && step.kind !== 'apply-cont' ? originSpan(trace.program, step.exp) : null;
+  const current = stale ? null : stepSpan;
   const contourSelection =
     picked && picked.position === position
       ? picked.node
-      : step && step.kind !== 'apply-cont' && step.exp.kind === 'var-exp'
-        ? step.exp.id
-        : null;
+      : (scopes?.references.find((r) => stepSpan && r.span.from === stepSpan.from && r.span.to === stepSpan.to)?.node.id ?? null);
   const parseError = result.ok ? null : { from: result.error.from, to: result.error.to };
 
   function run(module = language, text = source) {
@@ -246,16 +254,20 @@ export default function App() {
                 </div>
                 {view === 'ast' && <span className="label">click a node to go to its step · dashed: never evaluated</span>}
                 {view === 'contour' && <span className="label">boxes: where each declaration holds · numbers: lexical depth</span>}
+                {view === 'translation' && <span className="label">translation-of turns each variable into its lexical address</span>}
               </div>
               {view === 'trace' && <TracePanel trace={trace} position={position} smooth={motion.current === 'step'} onPick={setPosition} />}
               {view === 'contour' && scopes && (
                 <ContourView
-                  program={trace.program}
+                  program={studentProgram!}
                   scopes={scopes}
                   keywords={language.grammar.keywords}
                   selected={contourSelection}
                   onSelect={(node) => setPicked({ node, position })}
                 />
+              )}
+              {view === 'translation' && studentProgram && (
+                <TranslationView student={studentProgram} trace={trace} step={step ?? null} />
               )}
               {view === 'ast' && ast && (
                 <AstTree

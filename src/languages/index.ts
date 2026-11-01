@@ -2,6 +2,8 @@
 
 import type { LanguageId, LanguageModule } from '../core/language';
 import { letLanguage } from './let';
+import { letrecLanguage } from './letrec';
+import { namelessLanguage } from './nameless';
 import { procLanguage } from './proc';
 
 export interface LanguageEntry {
@@ -13,8 +15,8 @@ export interface LanguageEntry {
 export const LANGUAGES: readonly LanguageEntry[] = [
   { id: 'let', name: 'LET', module: letLanguage },
   { id: 'proc', name: 'PROC', module: procLanguage },
-  { id: 'letrec', name: 'LETREC', module: null },
-  { id: 'nameless', name: 'NAMELESS', module: null },
+  { id: 'letrec', name: 'LETREC', module: letrecLanguage },
+  { id: 'nameless', name: 'NAMELESS', module: namelessLanguage },
   { id: 'explicit-refs', name: 'EXPLICIT-REFS', module: null },
   { id: 'implicit-refs', name: 'IMPLICIT-REFS', module: null },
   { id: 'mutable-pairs', name: 'MUTABLE-PAIRS', module: null },

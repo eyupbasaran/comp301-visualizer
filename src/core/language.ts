@@ -23,7 +23,7 @@ export type LanguageId =
  * Panels a language can fill. The state panels (env, store, cont) are shown
  * side by side, never in tabs, whenever the language has them.
  */
-export type PanelId = 'ast' | 'trace' | 'contour' | 'env' | 'store' | 'cont';
+export type PanelId = 'ast' | 'trace' | 'contour' | 'env' | 'store' | 'cont' | 'translation';
 
 export interface Example {
   readonly title: string;
