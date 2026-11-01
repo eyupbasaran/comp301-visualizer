@@ -86,4 +86,4 @@ npm run typecheck
 npm run build
 ```
 
-Cloudflare Pages builds and publishes every merge to `main` (build command `npm test && npm run build`, output `dist`, Node version from `.node-version`).
+Cloudflare Workers Builds runs `npm test && npm run build` on every push (Node version from `.node-version`) and serves `dist` as `wrangler.jsonc` says: a merge to `main` goes live, any other branch gets a preview.
