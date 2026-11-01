@@ -77,14 +77,15 @@ export function expvalToProc(v: ExpVal): Proc {
   return extractorError('proc', v);
 }
 
+// The chapter 4 data-structures.scm files call these variants reference and mutable-pair.
 export function expvalToRef(v: ExpVal): Ref {
   if (v.tag === 'ref-val') return v.ref;
-  return extractorError('ref', v);
+  return extractorError('reference', v);
 }
 
 export function expvalToMutpair(v: ExpVal): MutPair {
   if (v.tag === 'mutpair-val') return v.p;
-  return extractorError('mutpair', v);
+  return extractorError('mutable-pair', v);
 }
 
 // (eopl:error 'expval-extractors "Looking for a ~s, found ~s" variant value)

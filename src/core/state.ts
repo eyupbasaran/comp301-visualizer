@@ -31,6 +31,11 @@ export function eventIndexAt(trace: Trace, position: number): number {
   return position < trace.steps.length ? trace.steps[position].eventIndex : trace.events.length;
 }
 
+/** The store at `position` alone, for panels that need nothing else. */
+export function storeAt(trace: Trace, position: number): StoreVal[] {
+  return storeCursor(trace).moveTo(eventIndexAt(trace, position));
+}
+
 export function stateAt(trace: Trace, position: number): StateAt {
   if (!Number.isInteger(position) || position < 0 || position > trace.steps.length) {
     throw new RangeError(`position ${position} is outside 0..${trace.steps.length}`);

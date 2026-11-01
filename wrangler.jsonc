@@ -1,0 +1,10 @@
+// Cloudflare Workers: serve the static site that `npm run build` writes to dist.
+// With this file, preview builds (wrangler versions upload) and production
+// deploys (wrangler deploy) use the same settings.
+{
+  "name": "comp301-visualizer",
+  "compatibility_date": "2026-10-31",
+  "assets": {
+    "directory": "./dist"
+  }
+}
