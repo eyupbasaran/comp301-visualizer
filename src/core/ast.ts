@@ -37,6 +37,17 @@ export interface Program<Root extends AstNode = AstNode> {
    * this is the only place their positions are kept.
    */
   readonly identifierSpans?: ReadonlyMap<number, readonly Span[]>;
+  /**
+   * Set on a program made by a translator (NAMELESS): for each node, where the
+   * expression it came from is in the student's source. `source` and `span`
+   * are then the translated text, which is what the trace shows.
+   */
+  readonly originSpans?: ReadonlyMap<number, Span>;
+}
+
+/** Where a node's expression is in the student's source: its own span, unless it was translated. */
+export function originSpan(program: Program, node: AstNode): Span {
+  return program.originSpans?.get(node.id) ?? node.span;
 }
 
 const NOT_FIELDS = new Set(['id', 'kind', 'span']);

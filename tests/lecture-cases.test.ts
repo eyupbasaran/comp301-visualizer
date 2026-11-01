@@ -44,7 +44,11 @@ describe('lecture examples', () => {
       if (c.error !== undefined) expect(outcome).toEqual({ kind: 'error', message: c.error });
       if (c.diverges) expect(outcome.kind).toBe('limit');
       if (c.steps !== undefined) expect(steps.length).toBe(c.steps);
-      if (c.translation !== undefined) throw new Error('Translation checks are not wired up yet: add them here.');
+      if (c.translation !== undefined) {
+        // The translated text keeps the student's line breaks and spacing, so compare without whitespace.
+        const squash = (s: string) => s.replace(/\s+/g, '');
+        expect(squash(result.trace.program.source)).toBe(squash(c.translation));
+      }
     });
   }
 });

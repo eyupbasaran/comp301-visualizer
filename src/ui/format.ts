@@ -135,7 +135,7 @@ export function explain(trace: Trace, step: Step): string | null {
       const a = value(first);
       const b = value(second);
       if (a && b && step.result) return `Both operands first: ${a} and ${b}; their difference is ${bookValue(step.result)}.`;
-      return 'Both operands are evaluated first, then subtracted.';
+      return 'The operands are evaluated left to right, then subtracted.';
     }
     case 'zero?-exp': {
       const n = first?.result;
@@ -165,13 +165,46 @@ export function explain(trace: Trace, step: Step): string | null {
       if (proc && arg && third) {
         const saved = envName(trace, proc.savedEnv);
         const caller = saved === rho ? '' : `, not the caller's ${rho}`;
-        return `Calls (procedure ${proc.bvar} …) with ${proc.bvar} = ${arg}. The body runs in a new frame ${envName(trace, third.env)} on top of the closure's saved env ${saved}${caller}.`;
+        // A nameless procedure has no parameter name; its argument is just the new #0.
+        const head = proc.bvar === null ? `Calls (procedure …) with ${arg}` : `Calls (procedure ${proc.bvar} …) with ${proc.bvar} = ${arg}`;
+        return `${head}. The body runs in a new frame ${envName(trace, third.env)} on top of the closure's saved env ${saved}${caller}.`;
       }
       return "The operator is evaluated, then the operand. The body then runs in the closure's saved env, extended with the parameter.";
     }
+    case 'letrec-exp': {
+      const name = exp.pName as string;
+      if (first) {
+        const frame = envName(trace, first.env);
+        return `${name} is bound recursively in a new frame ${frame} on top of ${rho}; the body runs there. Each lookup of ${name} makes a new closure whose saved env is ${frame} itself.`;
+      }
+      return `${name} is bound recursively in a new frame on top of ${rho}; the body runs there.`;
+    }
+    case 'nameless-var-exp':
+      return explainAddress(trace, step, Number(exp.n as bigint));
+    case 'nameless-let-exp': {
+      const bound = value(first);
+      if (bound && second) return `${bound} goes into a new frame ${envName(trace, second.env)} (#0) on top of ${rho}; the body runs there.`;
+      return `The right-hand side is evaluated in ${rho}, then the body in ${rho} with its value added as #0.`;
+    }
+    case 'nameless-proc-exp':
+      return `Makes a closure (procedure …) that remembers ${rho}, the env it was made in.`;
     default:
       return null;
   }
+}
+
+/** %lexref n: skip n frames of the env, read the next one. */
+function explainAddress(trace: Trace, step: ValueOfStep, n: number): string {
+  const { names } = frameNames(trace);
+  const frames = framesOf(step.env);
+  const at = frames[n];
+  if (!at) return `%lexref ${n} points past the end of the env.`;
+  const here = names.get(at.id) ?? '?';
+  const value = step.result ? `: ${sentenceValue(step.result)}` : '';
+  if (n === 0) return `%lexref 0 reads #0, the newest frame, ${here}${value}.`;
+  const skipped = [...new Set(frames.slice(0, n).map((f) => names.get(f.id) ?? '?'))].filter((s) => s !== here);
+  const over = skipped.length > 0 ? ` (${skipped.join(', ')})` : '';
+  return `%lexref ${n} skips ${n} frame${n === 1 ? '' : 's'}${over} and reads #${n}, in ${here}${value}.`;
 }
 
 /** The value-of calls a step made directly, in order. They sit between it and its last step. */
@@ -200,8 +233,14 @@ function explainLookup(trace: Trace, step: ValueOfStep, name: string): string {
       (frame.kind === 'extend-env-rec' && frame.pName === name) ||
       (frame.kind === 'extend-env-rec*' && frame.pNames.includes(name));
     if (bound) {
-      const value = step.result ? ` = ${sentenceValue(step.result)}` : '';
       const misses = skipped.filter((s, i) => s !== here && skipped.indexOf(s) === i);
+      if (frame.kind !== 'extend-env') {
+        // apply-env on a letrec frame makes a new closure on every lookup.
+        const proc = step.result ? ` ${sentenceValue(step.result)}` : '';
+        const where = misses.length === 0 ? `${name} is bound by letrec in ${here}` : `${name} is not bound in ${misses.join(', ')}, so the lookup goes on to ${here}, where letrec binds it`;
+        return `${where}. This lookup makes a new closure${proc} whose saved env is ${here}.`;
+      }
+      const value = step.result ? ` = ${sentenceValue(step.result)}` : '';
       if (misses.length === 0) return `${name} is bound in ${here}: ${name}${value}.`;
       return `${name} is not bound in ${misses.join(', ')}, so the lookup goes on to ${here}, where ${name}${value}.`;
     }

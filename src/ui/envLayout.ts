@@ -11,6 +11,7 @@
 // when that is a different chain (so you can see the frames a lookup skips);
 // and the env every drawn closure saved.
 
+import type { AstNode } from '../core/ast';
 import { sourceOf } from '../core/ast';
 import type { Env, Frame } from '../core/env';
 import { frameBinding, framesOf } from '../core/env';
@@ -131,10 +132,8 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
   while (queue.length > 0 && frames.size < MAX_FRAMES) {
     for (let e = queue.shift()!; e.kind !== 'empty-env' && !frames.has(e.id); e = e.savedEnv) {
       frames.set(e.id, e);
-      if (e.kind === 'extend-env') {
-        const proc = closureOf(e.bval);
-        if (proc) queue.push(proc.savedEnv);
-      }
+      const proc = e.kind === 'extend-env' ? closureOf(e.bval) : e.kind === 'extend-nameless-env' ? closureOf(e.val) : null;
+      if (proc) queue.push(proc.savedEnv);
     }
   }
 
@@ -182,8 +181,17 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
   const maxDepth = Math.max(0, ...all.map((n) => n.depth));
 
   // 4. Card text.
+  // A nameless env has no names: each frame shows its position in this step's
+  // env (#0 is the newest), which is the n of %lexref n.
+  const slot = new Map(framesOf(step.env).map((f, i) => [f.id, i]));
+  const exp = step.exp as unknown as { kind: string; var?: string; n?: bigint };
+  const found =
+    exp.kind === 'var-exp'
+      ? frameBinding(step.env, exp.var!)
+      : exp.kind === 'nameless-var-exp'
+        ? (framesOf(step.env)[Number(exp.n)] ?? null)
+        : null;
   const partsOf = (node: Node): CardPart[] => {
-    const found = step.exp.kind === 'var-exp' ? frameBinding(step.env, (step.exp as unknown as { var: string }).var) : null;
     const bindings = node.frames.flatMap((frame): CardPart[] => {
       switch (frame.kind) {
         case 'extend-env': {
@@ -194,8 +202,10 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
           return [{ text: `${frame.pName} = ●`, mark: frame === found }];
         case 'extend-env-rec*':
           return [{ text: frame.pNames.map((p) => `${p} = ●`).join('  '), mark: frame === found }];
-        case 'extend-nameless-env':
-          return [{ text: boxValue(frame.val) }];
+        case 'extend-nameless-env': {
+          const at = slot.get(frame.id);
+          return [{ text: at === undefined ? boxValue(frame.val) : `#${at} = ${boxValue(frame.val)}`, mark: frame === found }];
+        }
       }
     });
     return bindings.flatMap((part, i) => (i === 0 ? [part] : [{ text: '  ' }, part]));
@@ -204,11 +214,12 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
   for (const node of all) {
     const frame = node.frames[0];
     if (node === init) continue;
-    if (frame.kind === 'extend-env') {
-      const proc = closureOf(frame.bval);
+    if (frame.kind === 'extend-env' || frame.kind === 'extend-nameless-env') {
+      const proc = closureOf(frame.kind === 'extend-env' ? frame.bval : frame.val);
       if (proc) {
         const body = sourceOf(trace.program, proc.body).replace(/\s+/g, ' ');
-        const text = `procedure ${proc.bvar ?? ''} ${body.length > 22 ? body.slice(0, 21) + '…' : body}`;
+        const head = proc.bvar === null ? 'procedure' : `procedure ${proc.bvar}`;
+        const text = `${head} ${body.length > 22 ? body.slice(0, 21) + '…' : body}`;
         closures.push({ key: `c${proc.id}`, owner: node, proc, text, target: nodeOf(proc.savedEnv) });
       }
     } else if (frame.kind === 'extend-env-rec') {
@@ -236,7 +247,7 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
   const at = (node: Node) => ({ x: colX[node.col], y: TOP + (maxDepth - node.depth) * ROW, w: frameW[node.col] });
 
   // 6. Cards, then arrows.
-  const runningProc = runningClosure(step, closures);
+  const running = runningClosure(step, closures);
   const cards: DiagramCard[] = all.map((node) => {
     const { x, y, w } = at(node);
     return {
@@ -263,8 +274,8 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
       h: CARD_H,
       name: null,
       parts: [{ text: c.text }],
-      emphasis: c.proc !== null && c.proc === runningProc ? 'current' : c.owner.onChain ? 'chain' : 'muted',
-      caption: c.proc !== null && c.proc === runningProc ? 'running' : null,
+      emphasis: c.key === running ? 'current' : c.owner.onChain ? 'chain' : 'muted',
+      caption: c.key === running ? 'running' : null,
     });
   }
 
@@ -301,11 +312,11 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
     if (!c.target) continue;
     const sx = boxX + laneW[c.owner.col] / 2;
     const sy = owner.y + CARD_H;
-    const pointer = c.proc === runningProc ? 'chain' : emphasis;
+    const pointer = c.key === running ? 'chain' : emphasis;
     if (c.target === c.owner) {
       const ex = owner.x + owner.w * 0.75;
       const ey = owner.y + CARD_H + 1;
-      arrows.push({ key: `s${c.key}`, d: `M ${sx} ${sy} C ${sx} ${sy + 40}, ${ex} ${ey + 40}, ${ex} ${ey}`, emphasis });
+      arrows.push({ key: `s${c.key}`, d: `M ${sx} ${sy} C ${sx} ${sy + 40}, ${ex} ${ey + 40}, ${ex} ${ey}`, emphasis: pointer });
     } else {
       const t = at(c.target);
       const ex = t.x + t.w + 1;
@@ -321,13 +332,22 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
   return { width: right + PAD, height: TOP + maxDepth * ROW + CARD_H + PAD, cards, arrows, labels };
 }
 
-/** The closure whose body this step is running in: its body contains the expression, and its saved env is on this step's chain. */
-function runningClosure(step: EnvStep, closures: readonly Closure[]): Proc | null {
+/**
+ * The closure whose body this step is running in (its key): the body contains
+ * the expression, and the closure's saved env is on this step's chain. For a
+ * letrec frame the saved env is the frame itself.
+ */
+function runningClosure(step: EnvStep, closures: readonly Closure[]): string | null {
   const chain = new Set(framesOf(step.env).map((f) => f.id));
+  const inside = (body: AstNode) => body.span.from <= step.exp.span.from && step.exp.span.to <= body.span.to;
   for (const c of closures) {
-    const p = c.proc;
-    if (!p || p.savedEnv.kind === 'empty-env' || !chain.has(p.savedEnv.id)) continue;
-    if (p.body.span.from <= step.exp.span.from && step.exp.span.to <= p.body.span.to) return p;
+    if (c.proc) {
+      const saved = c.proc.savedEnv;
+      if (saved.kind !== 'empty-env' && chain.has(saved.id) && inside(c.proc.body)) return c.key;
+    } else {
+      const frame = c.owner.frames[0];
+      if (frame.kind === 'extend-env-rec' && chain.has(frame.id) && inside(frame.pBody)) return c.key;
+    }
   }
   return null;
 }

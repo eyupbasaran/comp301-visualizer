@@ -720,6 +720,53 @@ input {
   max-width: 72ch;
 }
 
+/* ---- translation (NAMELESS) ---- */
+
+.translation {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.translation-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.translation figure {
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.translation pre {
+  margin: 0;
+  padding: 10px 14px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 22px;
+  background: var(--sheet);
+  border: 1px solid var(--rule-faint);
+}
+
+.translation mark {
+  background: var(--mark);
+  color: var(--ink);
+}
+
+.translation code {
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.step-note .error {
+  color: var(--error);
+}
+
 /* ---- help ---- */
 
 .help-button {
@@ -1127,7 +1174,9 @@ input {
 
   .panel-lower > .trace,
   .panel-lower > .ast,
-  .panel-lower > .contour-wrap {
+  .panel-lower > .contour-wrap,
+  .panel-lower > .translation,
+  .panel-lower > .step-note {
     min-height: 0;
     max-height: none;
     overflow-y: auto;
