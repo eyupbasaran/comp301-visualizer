@@ -26,6 +26,11 @@ export function StepBox({ trace, state }: { trace: Trace; state: StateAt }) {
       <div className="stepbox">
         <div className="label">End of run · {count} steps</div>
         <OutcomeLine outcome={trace.outcome} />
+        {trace.output.length > 0 && (
+          <p className="step-note">
+            Printed: <span className="mono">{trace.output.join(' ')}</span>
+          </p>
+        )}
       </div>
     );
   }

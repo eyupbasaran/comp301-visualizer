@@ -471,8 +471,8 @@ input {
   min-width: 0;
 }
 
-.panel-store {
-  flex: 0 1 var(--store-width, 330px);
+.panel-side {
+  flex: 0 1 var(--side-width, 330px);
   min-width: 0;
   border-left: 1px solid var(--ink);
 }
@@ -562,6 +562,82 @@ input {
   color: var(--muted);
 }
 
+/* ---- continuation ---- */
+
+/* A stack of frames, innermost on top, like the boxes of the env diagram. */
+.cont {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+}
+
+.cont-val,
+.cont-note,
+.cont-bounce {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.cont-note {
+  font-style: italic;
+  color: var(--muted);
+}
+
+.cont-bounce {
+  color: var(--accent);
+}
+
+.cont-stack {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cont-frame {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 8px 12px;
+  font-family: var(--mono);
+  font-size: 14px;
+  background: var(--sheet);
+  border: 1px solid var(--ink);
+}
+
+/* The frame apply-cont is using at this step. */
+.cont-frame.applied {
+  border: 2px solid var(--accent);
+  padding: 7px 11px;
+}
+
+.cont-kind {
+  font-weight: 600;
+}
+
+/* Made by the previous step: the highlighter, as everywhere else. */
+.cont-frame.fresh .cont-kind {
+  background: linear-gradient(var(--mark), var(--mark)) no-repeat;
+  background-size: 100% 100%;
+  padding: 0 3px;
+  margin: 0 -3px;
+}
+
+.cont-field i {
+  font-family: var(--serif);
+  color: var(--muted);
+}
+
+.cont-more {
+  font-style: italic;
+  color: var(--muted);
+}
+
 /* ---- trace ---- */
 
 /* A scrolling list with only the visible rows drawn (TracePanel). Rows are 28px. */
@@ -635,6 +711,12 @@ input {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.trace-bounce {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--accent);
 }
 
 .trace-end {
@@ -1154,7 +1236,7 @@ input {
     display: none;
   }
 
-  .panel-store {
+  .panel-side {
     flex: 1 1 100%;
     border-left: 0;
     border-top: 1px solid var(--ink);
@@ -1266,12 +1348,13 @@ input {
   }
 
   .panel-env,
-  .panel-store {
+  .panel-side {
     min-height: 0;
   }
 
   .panel-env .env-scroll,
-  .panel-store .store {
+  .panel-side .store,
+  .panel-side .cont {
     flex: 1 1 auto;
     min-height: 0;
   }
