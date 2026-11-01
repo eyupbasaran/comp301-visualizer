@@ -12,10 +12,11 @@ interface LectureCase {
   lang: string;
   program: string;
   from: string;
-  /** Not on the slides; worked out by hand. Still to be checked against Racket. */
+  /** Not on the slides; worked out by hand, then checked against the official code in Racket. */
   computed?: boolean;
   value?: string;
   error?: string;
+  /** value-of calls (value-of/k and apply-cont calls in CPS), the same count as the official code in Racket. */
   steps?: number;
   diverges?: boolean;
   translation?: string;

@@ -75,7 +75,8 @@ source ──parse──▶ AST ──run──▶ Trace ──stateAt(trace, po
 ## Lecture cases (`tests/lecture-cases.json`)
 
 - One entry per program and language: `id`, `lang`, `program`, `from` (lecture), and what to check: `value`, `steps`, `error`, `diverges`, `translation`.
-- `computed: true` means the value is not on the slides; it was worked out by hand and still has to be checked against real Racket.
+- `computed: true` means the value is not on the slides; it was worked out by hand, then checked against the official code in Racket.
+- `steps` counts `value-of` calls (`value-of/k` and `apply-cont` calls in CPS). Every count matches the official code run in Racket with a step counter.
 
 ## Commands
 
