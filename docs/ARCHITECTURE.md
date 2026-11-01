@@ -87,4 +87,4 @@ npm run typecheck
 npm run build
 ```
 
-Cloudflare Workers Builds runs `npm test && npm run build` on every push (Node version from `.node-version`) and serves `dist` as `wrangler.jsonc` says: a merge to `main` goes live, any other branch gets a preview.
+Cloudflare Workers Builds runs `npm run build` on every push (Node version from `.node-version`) and serves `dist` as `wrangler.jsonc` says: a merge to `main` goes live (`wrangler deploy`), any other branch gets a preview (`wrangler preview`). The tests run in GitHub Actions (`.github/workflows/ci.yml`), not on Cloudflare.
