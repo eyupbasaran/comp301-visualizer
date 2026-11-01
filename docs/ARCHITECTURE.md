@@ -58,7 +58,7 @@ source ──parse──▶ AST ──run──▶ Trace ──stateAt(trace, po
 - Once a language's `module` is set, it appears in the picker with its examples.
 - Without any UI work it gets: the editor highlight, the step box, the Environment diagram, Trace, AST, Contour (for `let-exp`, `proc-exp` and `letrec-exp`), and the Store panel when `panels` has `'store'`.
 - A one-line explanation per step exists for every expression kind so far (`explain` in `src/ui/format.ts`). New expression kinds show just the equation until a sentence is added there.
-- The Continuation panel, and anything a language shows in its own way (thunks), are UI work: say what your language needs.
+- The Continuation panel is UI work: say what your language needs. Thunks and pairs in the store, and locations in the env diagram, are already drawn.
 
 ## Adding a language
 

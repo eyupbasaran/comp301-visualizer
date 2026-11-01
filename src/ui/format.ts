@@ -1,7 +1,7 @@
 // How the UI names and prints things: frame names (ρ0, ρ1, ...), values in
 // the book's notation, short source snippets, and one-line step explanations.
 
-import { sourceOf } from '../core/ast';
+import { sourceOf, type AstNode } from '../core/ast';
 import type { Env, Frame } from '../core/env';
 import { framesOf } from '../core/env';
 import type { StoreEvent } from '../core/store';
@@ -158,7 +158,7 @@ export function explain(trace: Trace, step: Step): string | null {
   if (step.kind !== 'value-of') return null;
   const exp = step.exp as unknown as Record<string, unknown> & { kind: string };
   const rho = envName(trace, step.env);
-  const [first, second, third] = subSteps(trace, step);
+  const [first, second] = subSteps(trace, step);
   const own = ownEvents(trace, step);
   const value = (s: ValueOfStep | undefined) => (s?.result ? bookValue(s.result) : null);
   switch (exp.kind) {
@@ -198,24 +198,8 @@ export function explain(trace: Trace, step: Step): string | null {
     }
     case 'proc-exp':
       return `Makes a closure (procedure ${exp.var as string} …) that remembers ${rho}, the env it was made in.`;
-    case 'call-exp': {
-      const proc = first?.result?.tag === 'proc-val' ? first.result.proc : null;
-      const arg = value(second);
-      if (proc && arg && third) {
-        const saved = envName(trace, proc.savedEnv);
-        const caller = saved === rho ? '' : `, not the caller's ${rho}`;
-        const frame = envName(trace, third.env);
-        // From IMPLICIT-REFS on, the argument goes into a new location first.
-        const alloc = own.find((e) => e.kind === 'newref');
-        if (alloc && proc.bvar !== null) {
-          return `Calls (procedure ${proc.bvar} …) with ${arg}, which goes into a new location, ${alloc.loc}. The body runs in a new frame ${frame} (${proc.bvar} → ${alloc.loc}) on top of the closure's saved env ${saved}${caller}.`;
-        }
-        // A nameless procedure has no parameter name; its argument is just the new #0.
-        const head = proc.bvar === null ? `Calls (procedure …) with ${arg}` : `Calls (procedure ${proc.bvar} …) with ${proc.bvar} = ${arg}`;
-        return `${head}. The body runs in a new frame ${frame} on top of the closure's saved env ${saved}${caller}.`;
-      }
-      return "The operator is evaluated, then the operand. The body then runs in the closure's saved env, extended with the parameter.";
-    }
+    case 'call-exp':
+      return explainCall(trace, step);
     case 'letrec-exp': {
       // LETREC binds one procedure (pName); the chapter 4 languages bind several (pNames).
       const names = Array.isArray(exp.pNames) ? (exp.pNames as string[]) : [exp.pName as string];
@@ -296,6 +280,61 @@ export function explain(trace: Trace, step: Step): string | null {
   }
 }
 
+/**
+ * A procedure call. How the operand is passed depends on the language: as a
+ * value (PROC to MUTABLE-PAIRS, in a new location from IMPLICIT-REFS on), as
+ * the location of a variable (CALL-BY-REFERENCE and the lazy languages), or as
+ * a thunk in a new location (CALL-BY-NAME, CALL-BY-NEED). The sub-steps and the
+ * step's own store events tell which.
+ */
+function explainCall(trace: Trace, step: ValueOfStep): string {
+  const exp = step.exp as unknown as { rator: AstNode; rand: AstNode & { var?: string } };
+  const rho = envName(trace, step.env);
+  const subs = subSteps(trace, step);
+  const rator = subs[0]?.exp === exp.rator ? subs[0] : undefined;
+  const proc = rator?.result?.tag === 'proc-val' ? rator.result.proc : null;
+  const last = subs[subs.length - 1];
+  const body = proc && subs.length > 1 && last.exp === proc.body ? last : undefined;
+  if (!proc || !body) {
+    return "The operator is evaluated, then the operand. The body then runs in the closure's saved env, extended with the parameter.";
+  }
+  // A variable operand is not evaluated in CALL-BY-REFERENCE and the lazy languages: no step of its own.
+  const rand = subs.find((s) => s.exp === exp.rand);
+  const arg = rand?.result ? bookValue(rand.result) : null;
+  const saved = envName(trace, proc.savedEnv);
+  const runs = `The body runs in a new frame ${envName(trace, body.env)}`;
+  const on = `on top of the closure's saved env ${saved}${saved === rho ? '' : `, not the caller's ${rho}`}.`;
+  // A nameless procedure has no parameter name; its argument is just the new #0.
+  if (proc.bvar === null) return `Calls (procedure …) with ${arg}. ${runs} ${on}`;
+  const x = proc.bvar;
+  const head = `Calls (procedure ${x} …)`;
+  const alloc = ownEvents(trace, step).find((e) => e.kind === 'newref');
+  if (alloc && isThunkValue(alloc.val)) {
+    return `${head} with a thunk for ${code(trace, exp.rand)}, not its value: the thunk goes into a new location, ${alloc.loc}, and runs only when ${x} is looked up. ${runs} (${x} → ${alloc.loc}) ${on}`;
+  }
+  if (alloc && rand) {
+    return `${head} with ${arg}, which goes into a new location, ${alloc.loc}. ${runs} (${x} → ${alloc.loc}) ${on}`;
+  }
+  if (!rand && exp.rand.var !== undefined) {
+    const name = exp.rand.var;
+    const loc = body.env.kind === 'extend-env' ? body.env.bval : null;
+    if (alloc) {
+      // A letrec name: apply-env puts a new closure into a new location on every lookup.
+      return `${head} with a new location, ${alloc.loc}, holding a new closure for ${name}. ${runs} (${x} → ${alloc.loc}) ${on}`;
+    }
+    return `${head} with the location of ${name}, ${loc}, not a copy of its value: ${x} and ${name} now share it. ${runs} (${x} → ${loc}) ${on}`;
+  }
+  return `${head} with ${x} = ${arg}. ${runs} ${on}`;
+}
+
+const isThunkValue = (v: StoreVal) => 'kind' in v;
+
+/** A piece of the program on one line, cut to `max` characters. */
+function code(trace: Trace, node: AstNode, max = 24): string {
+  const text = sourceOf(trace.program, node).replace(/\s+/g, ' ').trim();
+  return text.length > max ? text.slice(0, max - 1) + '…' : text;
+}
+
 /** %lexref n: skip n frames of the env, read the next one. */
 function explainAddress(trace: Trace, step: ValueOfStep, n: number): string {
   const { names } = frameNames(trace);
@@ -348,9 +387,24 @@ function explainLookup(trace: Trace, step: ValueOfStep, name: string): string {
       }
       if (typeof frame.bval === 'number') {
         // The env holds a location; the value is in the store.
-        const holds = step.result ? `, which holds ${sentenceValue(step.result)}` : '';
-        if (misses.length === 0) return `${name} is bound in ${here} to location ${frame.bval}${holds}.`;
-        return `${name} is not bound in ${misses.join(', ')}, so the lookup goes on to ${here}, where ${name} → ${frame.bval}${holds}.`;
+        const loc = frame.bval;
+        const where =
+          misses.length === 0
+            ? `${name} is bound in ${here} to location ${loc}`
+            : `${name} is not bound in ${misses.join(', ')}, so the lookup goes on to ${here}, where ${name} → ${loc}`;
+        // A thunk in the location: this step evaluates it (CALL-BY-NAME, CALL-BY-NEED).
+        const forced = subSteps(trace, step)[0];
+        if (forced) {
+          const got = step.result ? `: ${bookValue(step.result)}` : '';
+          const memo = ownEvents(trace, step).some((e) => e.kind === 'setref');
+          const after = memo
+            ? ` Call-by-need writes it back into location ${loc}, so the next lookup will not evaluate it again.`
+            : step.result
+              ? ` The thunk stays in location ${loc}: the next lookup evaluates it again.`
+              : '';
+          return `${where}, which holds a thunk. Its expression, ${code(trace, forced.exp)}, runs now in the env the thunk saved, ${envName(trace, forced.env)}${got}.${after}`;
+        }
+        return `${where}${step.result ? `, which holds ${sentenceValue(step.result)}` : ''}.`;
       }
       const value = step.result ? ` = ${sentenceValue(step.result)}` : '';
       if (misses.length === 0) return `${name} is bound in ${here}: ${name}${value}.`;

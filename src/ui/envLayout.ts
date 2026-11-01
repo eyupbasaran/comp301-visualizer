@@ -14,7 +14,9 @@
 // From IMPLICIT-REFS on, a frame binds a name to a store location (x → 3); a
 // closure kept in that location is drawn next to the frame all the same,
 // marked with its location. A letrec frame with several procedures gets one
-// closure box with a line per procedure: they all saved that frame.
+// closure box with a line per procedure: they all saved that frame. In the
+// lazy languages a thunk in a location is drawn the same way: its expression,
+// and an arrow to the env it saved.
 
 import type { AstNode } from '../core/ast';
 import { sourceOf } from '../core/ast';
@@ -22,7 +24,7 @@ import type { Env, Frame } from '../core/env';
 import { frameBinding, framesOf } from '../core/env';
 import { storeAt } from '../core/state';
 import type { ApplyContStep, Step, Trace } from '../core/trace';
-import type { DenVal, Proc, StoreVal } from '../core/values';
+import type { DenVal, Proc, StoreVal, Thunk } from '../core/values';
 import { boxValue, frameNames } from './format';
 
 type EnvStep = Exclude<Step, ApplyContStep>;
@@ -95,10 +97,12 @@ interface Node {
   onChain: boolean;
 }
 
+/** A closure box. CALL-BY-NAME and CALL-BY-NEED draw a thunk the same way: an expression with the env it saved. */
 interface Closure {
   readonly key: string;
   readonly owner: Node;
   readonly proc: Proc | null;
+  readonly thunk: Thunk | null;
   /** One line per procedure; only a letrec frame with several procedures has more than one. */
   readonly lines: readonly string[];
   /** Node of the saved env; the owner itself for a letrec frame. */
@@ -125,6 +129,12 @@ function closureOf(v: DenVal, store: readonly StoreVal[]): Proc | null {
   return held && !('kind' in held) && held.tag === 'proc-val' ? held.proc : null;
 }
 
+/** The thunk in the location a binding holds, if any (CALL-BY-NAME, CALL-BY-NEED). */
+function thunkOf(v: DenVal, store: readonly StoreVal[]): Thunk | null {
+  const held = typeof v === 'number' ? store[v] : null;
+  return held && 'kind' in held ? held : null;
+}
+
 const short = (text: string) => (text.length > 22 ? text.slice(0, 21) + '…' : text);
 
 function width(chars: number): number {
@@ -148,6 +158,8 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
       const proc =
         e.kind === 'extend-env' ? closureOf(e.bval, store) : e.kind === 'extend-nameless-env' ? closureOf(e.val, store) : null;
       if (proc) queue.push(proc.savedEnv);
+      const thunk = e.kind === 'extend-env' ? thunkOf(e.bval, store) : null;
+      if (thunk) queue.push(thunk.env);
     }
   }
 
@@ -237,19 +249,30 @@ export function layoutEnv(trace: Trace, position: number): Diagram {
     if (node === init) continue;
     if (frame.kind === 'extend-env' || frame.kind === 'extend-nameless-env') {
       const bound = frame.kind === 'extend-env' ? frame.bval : frame.val;
+      // Something kept in the store says where: "3: procedure x …".
+      const at = typeof bound === 'number' ? `${bound}: ` : '';
       const proc = closureOf(bound, store);
+      const thunk = thunkOf(bound, store);
       if (proc) {
         const head = proc.bvar === null ? 'procedure' : `procedure ${proc.bvar}`;
-        // A closure kept in the store says where: "3: procedure x …".
-        const at = typeof bound === 'number' ? `${bound}: ` : '';
-        closures.push({ key: `c${proc.id}`, owner: node, proc, lines: [`${at}${head} ${bodyText(proc.body)}`], target: nodeOf(proc.savedEnv) });
+        closures.push({
+          key: `c${proc.id}`,
+          owner: node,
+          proc,
+          thunk: null,
+          lines: [`${at}${head} ${bodyText(proc.body)}`],
+          target: nodeOf(proc.savedEnv),
+        });
+      } else if (thunk) {
+        closures.push({ key: `t${thunk.id}`, owner: node, proc: null, thunk, lines: [`${at}a-thunk ${bodyText(thunk.exp1)}`], target: nodeOf(thunk.env) });
       }
     } else if (frame.kind === 'extend-env-rec') {
-      closures.push({ key: `r${frame.id}`, owner: node, proc: null, lines: [`procedure ${frame.bVar} ${bodyText(frame.pBody)}`], target: node });
+      const lines = [`procedure ${frame.bVar} ${bodyText(frame.pBody)}`];
+      closures.push({ key: `r${frame.id}`, owner: node, proc: null, thunk: null, lines, target: node });
     } else if (frame.kind === 'extend-env-rec*') {
       const many = frame.pNames.length > 1;
       const lines = frame.pNames.map((p, i) => `${many ? `${p}: ` : ''}procedure ${frame.bVars[i]} ${bodyText(frame.pBodies[i])}`);
-      closures.push({ key: `r${frame.id}`, owner: node, proc: null, lines, target: node });
+      closures.push({ key: `r${frame.id}`, owner: node, proc: null, thunk: null, lines, target: node });
     }
   }
   const heightOf = (c: Closure) => Math.max(CARD_H, 2 * 10 + LINE_H * c.lines.length);
@@ -386,6 +409,11 @@ function runningClosure(step: EnvStep, closures: readonly Closure[]): { closure:
     if (c.proc) {
       const saved = c.proc.savedEnv;
       if (saved.kind !== 'empty-env' && chain.has(saved.id) && inside(c.proc.body)) return { closure: c, line: 0 };
+      continue;
+    }
+    if (c.thunk) {
+      const saved = c.thunk.env;
+      if (saved.kind !== 'empty-env' && chain.has(saved.id) && inside(c.thunk.exp1)) return { closure: c, line: 0 };
       continue;
     }
     const frame = c.owner.frames[0];

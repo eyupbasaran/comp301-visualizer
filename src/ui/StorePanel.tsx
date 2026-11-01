@@ -4,6 +4,13 @@
 import { useEffect, useRef } from 'react';
 import type { StoreRow } from './storeLayout';
 
+/** The line under a value: what this step does to it, or that it just changed. */
+function note(r: StoreRow): string | null {
+  if (r.does.length > 0) return `this step ${r.does.join(', then ')}`;
+  if (r.changed) return r.changed === 'new' ? 'just made' : 'just set';
+  return null;
+}
+
 export function StorePanel({ rows }: { rows: readonly StoreRow[] }) {
   const list = useRef<HTMLOListElement>(null);
 
@@ -26,9 +33,11 @@ export function StorePanel({ rows }: { rows: readonly StoreRow[] }) {
             .join(' ')}
         >
           <span className="store-loc">{r.loc}</span>
-          <span className="store-val">{r.text}</span>
-          <span className="store-names">{r.names.length > 0 ? `← ${r.names.join(', ')}` : ''}</span>
-          <span className="store-does">{r.does.length > 0 ? r.does.join(', then ') : r.changed === 'new' ? 'just made' : r.changed ? 'just set' : ''}</span>
+          <span className="store-val">
+            <span className="store-text">{r.text}</span>
+            {r.names.length > 0 && <span className="store-names">← {r.names.join(', ')}</span>}
+            {note(r) && <span className="store-does">{note(r)}</span>}
+          </span>
         </li>
       ))}
     </ol>

@@ -489,15 +489,15 @@ input {
   overflow: auto;
 }
 
+/* The value and the names that point at it wrap inside their column when the panel is narrow. */
 .store-row {
   position: relative;
   display: grid;
-  grid-template-columns: 3ch minmax(0, auto) minmax(0, 1fr) auto;
+  grid-template-columns: 3ch minmax(0, 1fr);
   align-items: baseline;
   gap: 12px;
   padding: 4px 8px;
   border-bottom: 1px solid var(--rule-faint);
-  white-space: nowrap;
 }
 
 .store-loc {
@@ -506,27 +506,27 @@ input {
 }
 
 .store-val {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
 }
 
 .store-names {
+  margin-left: 1ch;
   font-family: var(--serif);
   font-style: italic;
   color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .store-does {
+  display: block;
   font-family: var(--serif);
   font-size: 13px;
   font-style: italic;
+  line-height: 18px;
   color: var(--muted);
 }
 
 /* Changed since the previous position: the highlighter, as on the current expression. */
-.store-row.changed .store-val {
+.store-row.changed .store-text {
   background: linear-gradient(var(--mark), var(--mark)) no-repeat;
   background-size: 100% 100%;
   color: var(--ink);

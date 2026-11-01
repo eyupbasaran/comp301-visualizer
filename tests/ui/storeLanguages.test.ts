@@ -68,7 +68,8 @@ describe('IMPLICIT-REFS', () => {
       '1:5 ←v',
       '2:10 ←x',
       '3:0 ←count {writes 1}',
-      '4:(procedure dummy …)',
+      // g is not visible in the body, but its call is still running.
+      '4:(procedure dummy …) ←g (ρ2)',
       '5:11 ←dummy',
     ]);
     // The write shows up as a change once it has happened.
