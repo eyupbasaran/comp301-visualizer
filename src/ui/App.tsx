@@ -162,48 +162,50 @@ export default function App() {
   return (
     <div className="app" data-motion={motion.current}>
       <header className="topbar">
-        <h1 className="brand">COMP301 Visualizer</h1>
-        <div className="field">
-          <label htmlFor="language">Language</label>
-          <select id="language" className="mono" value={language.id} onChange={(e) => pickLanguage(e.target.value)}>
-            {LANGUAGES.map((entry) => (
-              <option key={entry.id} value={entry.id} disabled={!entry.module}>
-                {entry.module ? entry.name : `${entry.name} (soon)`}
-              </option>
-            ))}
-          </select>
-          {variants && (
-            <select
-              className="mono"
-              aria-label={variants.label}
-              title={language.variant?.description}
-              value={variants.modules.indexOf(language)}
-              onChange={(e) => pickVariant(variants.modules[Number(e.target.value)])}
-            >
-              {variants.modules.map((module, i) => (
-                <option key={module.variant?.id ?? i} value={i}>
-                  {module.variant?.id ?? module.name}
+        <h1 className="brand">Schema</h1>
+        <div className="controls">
+          <div className="field">
+            <label htmlFor="language">Language</label>
+            <select id="language" className="mono" value={language.id} onChange={(e) => pickLanguage(e.target.value)}>
+              {LANGUAGES.map((entry) => (
+                <option key={entry.id} value={entry.id} disabled={!entry.module}>
+                  {entry.module ? entry.name : `${entry.name} (soon)`}
                 </option>
               ))}
             </select>
-          )}
+            {variants && (
+              <select
+                className="mono"
+                aria-label={variants.label}
+                title={language.variant?.description}
+                value={variants.modules.indexOf(language)}
+                onChange={(e) => pickVariant(variants.modules[Number(e.target.value)])}
+              >
+                {variants.modules.map((module, i) => (
+                  <option key={module.variant?.id ?? i} value={i}>
+                    {module.variant?.id ?? module.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div className="field">
+            <label htmlFor="example">Example</label>
+            <select id="example" value={exampleIndex} onChange={(e) => pickExample(Number(e.target.value))}>
+              {exampleIndex === -1 && <option value={-1}>Your program</option>}
+              {language.examples.map((example, i) => (
+                <option key={example.title} value={i}>
+                  {example.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button type="button" className="run" onClick={() => run()} title="Run (Ctrl+Enter)">
+            Run
+          </button>
+          <div className="summary">{summary(result)}</div>
+          <ThemeToggle />
         </div>
-        <div className="field">
-          <label htmlFor="example">Example</label>
-          <select id="example" value={exampleIndex} onChange={(e) => pickExample(Number(e.target.value))}>
-            {exampleIndex === -1 && <option value={-1}>Your program</option>}
-            {language.examples.map((example, i) => (
-              <option key={example.title} value={i}>
-                {example.title}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button type="button" className="run" onClick={() => run()} title="Run (Ctrl+Enter)">
-          Run
-        </button>
-        <div className="summary">{summary(result)}</div>
-        <ThemeToggle />
       </header>
 
       <main
@@ -260,7 +262,6 @@ export default function App() {
               <div className="panel panel-env">
                 <div className="panel-head">
                   <h2>Environment</h2>
-                  <span className="label">newest frame first; bold boxes are the env of this step</span>
                   <EnvHelp />
                 </div>
                 {diagram && diagram.cards.length > 0 ? (
@@ -292,7 +293,6 @@ export default function App() {
                     <div className="panel panel-side">
                       <div className="panel-head">
                         <h2>Store</h2>
-                        <span className="label">outlined: what this step uses</span>
                       </div>
                       {storeRows ? <StorePanel rows={storeRows} /> : <p className="step-note">Fix the program to see its store.</p>}
                     </div>
