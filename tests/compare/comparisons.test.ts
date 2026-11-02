@@ -27,25 +27,27 @@ describe('comparisons', () => {
         });
       }
 
-      if (c.runBoth) {
-        const { source, measure } = c.runBoth;
-        it('its run-in-both program parses in both and differs in value or measure', () => {
-          const [ra, rb] = [runSource(from, source), runSource(to, source)];
+      for (const ex of c.runBoth ?? []) {
+        it(`run in both, "${ex.title}": parses in both and differs in value or ${ex.measure ?? 'value'}`, () => {
+          const [ra, rb] = [runSource(from, ex.source), runSource(to, ex.source)];
           expect(ra.ok && rb.ok).toBe(true);
           const sameValue = outcome(ra) === outcome(rb);
-          const m = measure && ra.ok && rb.ok ? [MEASURES[measure].of(ra.trace), MEASURES[measure].of(rb.trace)] : null;
+          const m = ex.measure && ra.ok && rb.ok ? [MEASURES[ex.measure].of(ra.trace), MEASURES[ex.measure].of(rb.trace)] : null;
           // pairval1/pairval2 differ only in how the pair is kept, which `look` points at.
           if (c.id !== 'pairval1-pairval2') expect(!sameValue || (m !== null && m[0] !== m[1])).toBe(true);
         });
       }
 
-      if (c.twoWays) {
-        const { from: a, to: b } = c.twoWays;
-        it('its two programs each run in their own language, to the same value', () => {
-          expect(outcome(runSource(from, a))).toBe(outcome(runSource(to, b)));
-          expect(outcome(runSource(from, a))).not.toMatch(/parse error|error|limit|crash/);
+      for (const ex of c.twoWays ?? []) {
+        it(`two ways, "${ex.title}": each runs in its own language, to the same value`, () => {
+          expect(outcome(runSource(from, ex.from))).toBe(outcome(runSource(to, ex.to)));
+          expect(outcome(runSource(from, ex.from))).not.toMatch(/parse error|error|limit|crash/);
         });
       }
+
+      it('example titles are unique within each section', () => {
+        for (const list of [c.runBoth ?? [], c.twoWays ?? []]) expect(new Set(list.map((e) => e.title)).size).toBe(list.length);
+      });
     });
   }
 });

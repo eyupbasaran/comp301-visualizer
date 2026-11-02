@@ -12,6 +12,22 @@ import { RunBoth } from './RunBoth';
 
 const GROUPS = [...new Set(COMPARISONS.map((c) => c.group))];
 
+function ExamplePicker(props: { id: string; examples: readonly { title: string }[]; value: number; onChange(i: number): void }) {
+  if (props.examples.length < 2) return null;
+  return (
+    <div className="field example-picker">
+      <label htmlFor={props.id}>Example</label>
+      <select id={props.id} value={props.value} onChange={(e) => props.onChange(Number(e.target.value))}>
+        {props.examples.map((ex, i) => (
+          <option key={ex.title} value={i}>
+            {ex.title}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 interface Props {
   /** The language open in Explore: Compare starts with the comparison that leads to it. */
   initial: LanguageId;
@@ -22,6 +38,8 @@ export default function ComparePage({ initial, onOpen }: Props) {
   const [comparison, setComparison] = useState<Comparison>(() => comparisonFor(initial));
   const [picked, setPicked] = useState<string | null>(null);
   const [target, setTarget] = useState<{ row: number; nonce: number } | null>(null);
+  const [runPick, setRunPick] = useState(0);
+  const [twoPick, setTwoPick] = useState(0);
   const { from: fromSide, to: toSide, notes, runBoth, twoWays } = comparison;
   const fromCode = codeOf(fromSide);
   const toCode = codeOf(toSide);
@@ -63,6 +81,8 @@ export default function ComparePage({ initial, onOpen }: Props) {
     setComparison(COMPARISONS.find((c) => c.id === id)!);
     setPicked(null);
     setTarget(null);
+    setRunPick(0);
+    setTwoPick(0);
   }
 
   function goTo(i: number) {
@@ -161,8 +181,16 @@ export default function ComparePage({ initial, onOpen }: Props) {
           <div className="panel-head">
             <h2>Run in both</h2>
             <span className="label">the same program, two languages</span>
+            <ExamplePicker id="run-example" examples={runBoth} value={runPick} onChange={setRunPick} />
           </div>
-          <RunBoth key={`${comparison.id}-both`} sides={sides} sources={[runBoth.source]} look={runBoth.look} measure={runBoth.measure} onOpen={onOpen} />
+          <RunBoth
+            key={`${comparison.id}-both-${runPick}`}
+            sides={sides}
+            sources={[runBoth[runPick].source]}
+            look={runBoth[runPick].look}
+            measure={runBoth[runPick].measure}
+            onOpen={onOpen}
+          />
         </section>
       )}
 
@@ -171,8 +199,15 @@ export default function ComparePage({ initial, onOpen }: Props) {
           <div className="panel-head">
             <h2>Same idea, two ways</h2>
             <span className="label">one program in each language</span>
+            <ExamplePicker id="two-example" examples={twoWays} value={twoPick} onChange={setTwoPick} />
           </div>
-          <RunBoth key={`${comparison.id}-two`} sides={sides} sources={[twoWays.from, twoWays.to]} look={twoWays.task} onOpen={onOpen} />
+          <RunBoth
+            key={`${comparison.id}-two-${twoPick}`}
+            sides={sides}
+            sources={[twoWays[twoPick].from, twoWays[twoPick].to]}
+            look={twoWays[twoPick].task}
+            onOpen={onOpen}
+          />
         </section>
       )}
     </div>

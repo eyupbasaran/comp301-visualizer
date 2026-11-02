@@ -1678,3 +1678,7 @@ input {
 .link-button:hover {
   text-decoration: underline;
 }
+
+.example-picker {
+  margin-left: auto;
+}

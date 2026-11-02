@@ -22,7 +22,8 @@ it('opens on the comparison that leads to each language, with its notes and only
 
 it('lists every comparison in the picker, and only those', () => {
   const html = render('let');
-  expect(html.match(/<option /g)!.length).toBe(COMPARISONS.length);
+  const picker = html.match(/<select id="compare-pair".*?<\/select>/)![0];
+  expect(picker.match(/<option /g)!.length).toBe(COMPARISONS.length);
 });
 
 it('LET → PROC opens interp.scm, marks the proc-exp clause and lists the new productions', () => {
@@ -30,6 +31,14 @@ it('LET → PROC opens interp.scm, marks the proc-exp clause and lists the new p
   expect(html).toContain('+ (expression (&quot;proc&quot; &quot;(&quot; identifier &quot;)&quot; expression) proc-exp)');
   expect(html).toContain('aria-pressed="true">interp.scm');
   expect(html).toMatch(/note-num">1<\/span><\/td>.*?\(proc-exp \(var body\)/);
+});
+
+it('offers the examples of a section to choose from, and opens on the first', () => {
+  const html = render('call-by-reference');
+  const c = comparisonFor('call-by-reference');
+  const picker = html.match(/<select id="run-example".*?<\/select>/)![0];
+  for (const ex of c.runBoth!) expect(picker).toContain(ex.title);
+  expect(html).toContain(c.runBoth![0].look.replace(/'/g, '&#x27;'));
 });
 
 it('dims comments and leaves out files with no code change', () => {
