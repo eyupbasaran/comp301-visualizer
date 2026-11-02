@@ -1,4 +1,6 @@
-# COMP301 Visualizer
+# Schema
+
+Step through the EOPL languages of COMP301 and see the environment, store and continuation at each step.
 
 Languages, and the official EOPL3 folder each one is translated from:
 
