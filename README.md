@@ -32,6 +32,10 @@ Each interpreter is a line-by-line TypeScript translation of the official EOPL3 
 - The only additions are the recording calls: `rec.valueOf` / `rec.returns` around each `value-of`, and `rec.*` for env frames, closures and the store.
 - Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Compare
+
+The **Compare** tab in the top bar compares two languages from a curated list: each step of the course (PROC from LET, NAMELESS from PROC, …), the parameter-passing family (CALL-BY-VALUE, which is IMPLICIT-REFS, against CALL-BY-REFERENCE, CALL-BY-NAME and CALL-BY-NEED), and the two pair representations. For each it shows hand-written notes, the grammar productions added or removed, and the official code side by side, with comments dimmed and never counted as a change. Where one program shows the difference (in its value, or in a number such as thunks evaluated or the size of the control context), it is run in both; otherwise the same task is written once in each language. The official `.scm` files are vendored in `src/eopl3/` (pinned in `src/eopl3/SOURCE`). CALL-BY-NAME and TRAMPOLINED have no official folder, so pairs with them compare our TypeScript ports.
+
 ## Credit
 
 The interpreters are translated from the code of *Essentials of Programming Languages*, 3rd ed., by Daniel P. Friedman and Mitchell Wand, licensed under [CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/).
