@@ -10,8 +10,10 @@ import {
   PAD_Y,
   TEXT_H,
   colX,
+  contourBox,
   contourPath,
   linesOf,
+  padding,
   position,
   textTop,
   type Contour,
@@ -57,7 +59,7 @@ export function ContourView({ program, scopes, keywords, selected, onSelect }: P
   const lines = linesOf(program.source);
   const keywordSet = new Set(keywords);
   const maxLevel = Math.max(0, ...scopes.contours.map((c) => c.level));
-  const width = colX(Math.max(...lines.map((l) => l.text.length))) + PAD_X + 8 + maxLevel * 4;
+  const width = colX(Math.max(...lines.map((l) => l.text.length))) + PAD_X + 8 + padding(0, maxLevel).right;
   const height = textTop(lines.length - 1) + LINE + PAD_Y;
 
   const ref = scopes.references.find((r) => r.node.id === selected) ?? null;
@@ -84,13 +86,15 @@ export function ContourView({ program, scopes, keywords, selected, onSelect }: P
           {binderSpan && band(binderSpan.from, binderSpan.to, 'contour-mark', 'binder')}
 
           <svg className="contour-lines" width={width} height={height} aria-hidden="true">
-            {scopes.contours.map((c) => (
-              <path
-                key={c.id}
-                d={contourPath(lines, c.region, c.level, maxLevel)}
-                className={c === binding ? 'contour binding' : crossed.has(c.id) ? 'contour crossed' : 'contour'}
-              />
-            ))}
+            {scopes.contours.map((c) => {
+              const className = `contour level-${c.level % 4}${c === binding ? ' binding' : crossed.has(c.id) ? ' crossed' : ''}`;
+              const box = contourBox(lines, c.region, c.owner, c.level, maxLevel);
+              return box ? (
+                <rect key={c.id} x={box.left} y={box.top} width={box.right - box.left} height={box.bottom - box.top} rx={6} className={className} />
+              ) : (
+                <path key={c.id} d={contourPath(lines, c.region, c.level, maxLevel)} className={className} />
+              );
+            })}
           </svg>
 
           {lines.map((line, i) => {
