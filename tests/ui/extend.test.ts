@@ -5,10 +5,9 @@ import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it } from 'vitest';
 import { runSource } from '../../src/core/language';
 import { positionCount, stateAt } from '../../src/core/state';
-import { EXERCISES, modelLanguage } from '../../src/extend/exercises';
+import { baseOf, EXERCISES, modelLanguage } from '../../src/extend/exercises';
 import { layoutAst } from '../../src/ui/astLayout';
 import { layoutCont } from '../../src/ui/contLayout';
-import { analyzeScopes } from '../../src/ui/contours';
 import { layoutEnv } from '../../src/ui/envLayout';
 import ExtendPage from '../../src/ui/extend/ExtendPage';
 import { equation, explain } from '../../src/ui/format';
@@ -73,7 +72,6 @@ describe('Explore on an extended language', () => {
         const r = runSource(lang, example.source);
         if (!r.ok) throw r.error;
         const { program, trace } = r;
-        analyzeScopes(program);
         for (const step of trace.steps) {
           equation(trace, step);
           explain(trace, step);
@@ -86,6 +84,13 @@ describe('Explore on an extended language', () => {
       }
     });
   }
+
+  it('has no Contour tab: the contour view does not know the new binding forms', () => {
+    for (const ex of EXERCISES) {
+      expect(modelLanguage(ex).panels).not.toContain('contour');
+      expect(modelLanguage(ex).panels).toEqual(baseOf(ex).panels.filter((p) => p !== 'contour'));
+    }
+  });
 
   it('shows the new continuations of let2 in the continuation panel', () => {
     const r = runSource(modelLanguage(EXERCISES.find((e) => e.id === 'let2')!), 'let2 x = 1 y = 2\nin -(x,y)');

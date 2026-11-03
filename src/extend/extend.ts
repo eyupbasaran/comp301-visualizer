@@ -19,6 +19,9 @@ export function extendLanguage(
   return {
     ...base,
     variant: { id: production[2], description: `${base.name} extended with ${production[2]} (Extend mode)` },
+    // The contour view only knows the base language's binding forms: it would put the
+    // new expression's variables in the wrong scope.
+    panels: base.panels.filter((panel) => panel !== 'contour'),
     grammar,
     examples,
     parse: (source) => grammar.parse(source),

@@ -38,7 +38,7 @@ The **Compare** tab in the top bar compares two languages from a curated list: e
 
 ## Extend
 
-The **Extend** tab is guided practice for the classic "extend the language" question: given a new expression (let-if, Book Ex. 3.6 `minus`, 3.12 `cond`, 3.17 `let*`, 4.34 `letref`, 5.3 `let2` in CPS), write (a) the concrete grammar entry, (b) the abstract syntax, (c) the define-datatype entry, (d) the behaviour specification and (e) the implementation. (a) is tried live: the site adds it to the base grammar, says whether it is still LL(1), parses the example programs and shows which part of each goes into which field. (b) and (c) are checked against (a). For (d) and (e) there is a model answer, a checklist of what a full answer decides, and the closest clauses of the official `interp.scm`. The model answer runs, and can be stepped through in Explore.
+The **Extend** tab is guided practice for the classic "extend the language" question: given a new expression (let-if, Book Ex. 3.6 `minus`, 3.12 `cond`, 3.17 `let*`, 4.34 `letref`, 5.3 `let2` in CPS), write (a) the concrete grammar entry, (b) the abstract syntax, (c) the define-datatype entry, (d) the behaviour specification and (e) the implementation. (a) is tried live: the site adds it to the base grammar, says whether it is still LL(1), parses the example programs and shows which part of each goes into which field. (b) and (c) are checked against (a). For (d) and (e) there is a model answer, a checklist of what a full answer decides, and the closest clauses of the official `interp.scm`. The model answer runs, and can be stepped through in Explore (without the Contour tab, which only knows the base language's binding forms).
 
 ## Credit
 
