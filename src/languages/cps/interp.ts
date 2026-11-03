@@ -9,16 +9,16 @@
 // the loop at the end makes it. The calls, their order and their arguments are
 // those of the official code.
 
-import type { Program } from '../../core/ast';
+import type { AstNode, Program } from '../../core/ast';
 import type { Env } from '../../core/env';
-import { record, type RunOptions, type Trace } from '../../core/trace';
+import { record, type Cont, type Recorder, type RunOptions, type Trace } from '../../core/trace';
 import { boolVal, expvalToBool, expvalToNum, expvalToProc, numVal, procVal, type ExpVal, type Proc } from '../../core/values';
 import type { Continuation, Diff1Cont, Diff2Cont, EndCont, IfTestCont, LetExpCont, RandCont, RatorCont, Zero1Cont } from './continuations';
 import { applyEnv, initEnv } from './environments';
 import type { AProgram, Expression } from './lang';
 
 /** The tail call to make next, or the final answer. */
-type Next =
+export type Next =
   | { readonly kind: 'value-of/k'; readonly exp: Expression; readonly env: Env; readonly cont: Continuation }
   | { readonly kind: 'apply-cont'; readonly cont: Continuation; readonly val: ExpVal }
   | { readonly kind: 'done'; readonly val: ExpVal };
@@ -26,9 +26,27 @@ type Next =
 const valueOfK = (exp: Expression, env: Env, cont: Continuation): Next => ({ kind: 'value-of/k', exp, env, cont });
 const applyCont = (cont: Continuation, val: ExpVal): Next => ({ kind: 'apply-cont', cont, val });
 
+interface ExtensionOps {
+  valueOfK(exp: AstNode, env: Env, cont: Cont): Next;
+  applyCont(cont: Cont, val: ExpVal): Next;
+  rec: Recorder;
+}
+
+/** Clauses for an expression this language does not have, and its continuations: an Extend exercise's model answer. */
+export interface Extension {
+  valueOfK(exp: AstNode, env: Env, cont: Cont, ops: ExtensionOps): Next;
+  applyCont(cont: Cont, val: ExpVal, ops: ExtensionOps): Next;
+}
+
 // value-of-program : Program -> FinalAnswer
-export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Trace {
+export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions, extension?: Extension): Trace {
   return record(pgm, options, (rec) => {
+    const ops: ExtensionOps = {
+      valueOfK: (exp, env, cont) => valueOfK(exp as Expression, env, cont as Continuation),
+      applyCont: (cont, val) => applyCont(cont as Continuation, val),
+      rec,
+    };
+
     // value-of/k : Exp * Env * Cont -> FinalAnswer
     function stepValueOfK(exp: Expression, env: Env, cont: Continuation): Next {
       rec.valueOfK(exp, env, cont);
@@ -59,6 +77,8 @@ export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Tr
           return valueOfK(exp.exp1, env, rec.cont<Diff1Cont>({ kind: 'diff1-cont', exp2: exp.exp2, savedEnv: env, savedCont: cont }));
         case 'call-exp':
           return valueOfK(exp.rator, env, rec.cont<RatorCont>({ kind: 'rator-cont', rand: exp.rand, savedEnv: env, savedCont: cont }));
+        default:
+          return extension!.valueOfK(exp as AstNode, env, cont, ops);
       }
     }
 
@@ -88,6 +108,8 @@ export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Tr
           const proc = expvalToProc(cont.val1);
           return applyProcedureK(proc, val, cont.savedCont);
         }
+        default:
+          return extension!.applyCont(cont as Cont, val, ops);
       }
     }
 

@@ -1682,3 +1682,153 @@ input {
 .example-picker {
   margin-left: auto;
 }
+
+/* ---- extend ---- */
+
+.question {
+  margin: 0;
+  max-width: 78ch;
+  font-size: 17px;
+  line-height: 26px;
+  white-space: pre-wrap;
+}
+
+.answer-input {
+  width: 100%;
+  max-width: 100ch;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--ink);
+  background: var(--sheet);
+  border: 1px solid var(--rule-muted);
+  border-radius: 0;
+  resize: vertical;
+}
+
+.answer-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+}
+
+.check-button {
+  min-height: 36px;
+  padding: 0 18px;
+  font-size: 15px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.check-button:hover {
+  background: var(--hover);
+}
+
+.status {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.status.good {
+  color: var(--accent);
+}
+
+.status.bad {
+  color: var(--error);
+}
+
+pre.answer {
+  margin: 0;
+  max-width: 100ch;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  line-height: 21px;
+  white-space: pre-wrap;
+  background: var(--sheet);
+  border: 1px solid var(--rule-faint);
+}
+
+pre.answer.caret {
+  color: var(--error);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.model-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 14px;
+  border-left: 3px solid var(--accent);
+}
+
+.example-checks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.example-checks .link-button[aria-pressed='true'] {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.field-tree-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.example-source {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.field-tree,
+.field-tree ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  line-height: 22px;
+}
+
+.field-tree {
+  padding-left: 0;
+  list-style: none;
+}
+
+.field-name {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.field-list {
+  padding: 0 4px;
+  font-size: 12px;
+  border: 1px solid var(--rule-muted);
+}
+
+.checklist {
+  margin: 0;
+  padding-left: 22px;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.extension-badge {
+  margin-left: 0;
+}

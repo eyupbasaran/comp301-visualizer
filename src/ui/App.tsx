@@ -23,8 +23,10 @@ import { ThemeToggle } from './ThemeToggle';
 import { TracePanel } from './TracePanel';
 import { TranslationView } from './TranslationView';
 
-// Compare mode, with the vendored official code, loads only when opened.
+// Compare and Extend, with the vendored official code, load only when opened.
 const ComparePage = lazy(() => import('./compare/ComparePage'));
+const ExtendPage = lazy(() => import('./extend/ExtendPage'));
+const MODES = { explore: 'Explore', compare: 'Compare', extend: 'Extend' } as const;
 
 const START = { language: 'proc', example: 2 };
 const PROGRAM_WIDTH = 460;
@@ -53,7 +55,7 @@ export default function App() {
   const [result, setResult] = useState<RunResult>(() => runSource(language, source));
   const [position, setPosition] = useState(0);
   const [lower, setLower] = useState<LowerView>('trace');
-  const [mode, setMode] = useState<'explore' | 'compare'>('explore');
+  const [mode, setMode] = useState<keyof typeof MODES>('explore');
   // A variable picked in the contour view; it applies only at the step where it was picked.
   const [picked, setPicked] = useState<{ node: number; position: number } | null>(null);
   // Sizes the viewer set with the drag handles.
@@ -85,6 +87,8 @@ export default function App() {
   const contView = useMemo(() => (trace && side === 'cont' ? layoutCont(trace, position) : null), [trace, side, position]);
   // The implementations of this language, when the official code has more than one.
   const variants = LANGUAGES.find((entry) => entry.id === language.id)?.variants;
+  // A language from Extend mode: the picker only knows the registered ones.
+  const extension = !LANGUAGES.some((entry) => entry.module === language || entry.variants?.modules.includes(language));
   const views = LOWER_VIEWS.filter((v) => language.panels.includes(v.id));
   const view = views.some((v) => v.id === lower) ? lower : (views[0]?.id ?? 'trace');
   const ast = useMemo(
@@ -169,9 +173,9 @@ export default function App() {
         <h1 className="brand">Schema</h1>
         <div className="controls">
           <div className="tabs mode-tabs" role="group" aria-label="Mode">
-            {(['explore', 'compare'] as const).map((m) => (
+            {(Object.keys(MODES) as (keyof typeof MODES)[]).map((m) => (
               <button key={m} type="button" className="tab" aria-pressed={mode === m} onClick={() => setMode(m)}>
-                {m === 'explore' ? 'Explore' : 'Compare'}
+                {MODES[m]}
               </button>
             ))}
           </div>
@@ -186,6 +190,11 @@ export default function App() {
                     </option>
                   ))}
                 </select>
+                {extension && (
+                  <span className="badge extension-badge" title={language.variant?.description}>
+                    + {language.variant?.id}
+                  </span>
+                )}
                 {variants && (
                   <select
                     className="mono"
@@ -226,6 +235,10 @@ export default function App() {
       {mode === 'compare' ? (
         <Suspense fallback={<p className="step-note compare">Loading…</p>}>
           <ComparePage initial={language.id} onOpen={openInExplore} />
+        </Suspense>
+      ) : mode === 'extend' ? (
+        <Suspense fallback={<p className="step-note compare">Loading…</p>}>
+          <ExtendPage onOpen={openInExplore} />
         </Suspense>
       ) : (
         <>
