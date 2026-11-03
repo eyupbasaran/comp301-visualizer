@@ -928,8 +928,10 @@ input {
   cursor: pointer;
 }
 
+/* The button lies over the variable's text, so it is outlined, never filled. */
 .contour-ref:hover {
-  background: var(--hover);
+  outline: 1px solid var(--rule-muted);
+  outline-offset: -1px;
 }
 
 .contour-depth {
