@@ -8,6 +8,7 @@ import { layoutAst, stepOfNode } from './astLayout';
 import { AstTree } from './AstTree';
 import { analyzeScopes } from './contours';
 import { ContourView } from './ContourView';
+import { reindent } from './reindent';
 import { Editor } from './Editor';
 import { EnvDiagram } from './EnvDiagram';
 import { EnvHelp } from './EnvHelp';
@@ -97,10 +98,12 @@ export default function App() {
   );
   // The student's own program. Usually the trace runs on it; NAMELESS runs on its translation.
   const studentProgram = result.ok ? result.program : null;
-  const scopes = useMemo(
-    () => (studentProgram && view === 'contour' ? analyzeScopes(studentProgram) : null),
-    [studentProgram, view],
+  // The contour diagram draws the program re-indented, so every contour is a box.
+  const contourProgram = useMemo(
+    () => (studentProgram && view === 'contour' ? (reindent(language, studentProgram) ?? studentProgram) : null),
+    [studentProgram, view, language],
   );
+  const scopes = useMemo(() => (contourProgram ? analyzeScopes(contourProgram) : null), [contourProgram]);
   const step = state?.step;
   // Where this step's expression is in the student's source.
   const stepSpan = trace && step && step.kind !== 'apply-cont' ? originSpan(trace.program, step.exp) : null;
@@ -108,7 +111,8 @@ export default function App() {
   const contourSelection =
     picked && picked.position === position
       ? picked.node
-      : (scopes?.references.find((r) => stepSpan && r.span.from === stepSpan.from && r.span.to === stepSpan.to)?.node.id ?? null);
+      : (studentProgram?.nodes.find((n) => n.kind === 'var-exp' && stepSpan && n.span.from === stepSpan.from && n.span.to === stepSpan.to)?.id ??
+        null);
   const parseError = result.ok ? null : { from: result.error.from, to: result.error.to };
 
   function run(module = language, text = source) {
@@ -337,13 +341,13 @@ export default function App() {
                   ))}
                 </div>
                 {view === 'ast' && <span className="label">click a node to go to its step · dashed: never evaluated</span>}
-                {view === 'contour' && <span className="label">boxes: where each declaration holds · numbers: lexical depth</span>}
+                {view === 'contour' && <span className="label">boxes: where each declaration holds · numbers: lexical depth · re-indented as in the book</span>}
                 {view === 'translation' && <span className="label">translation-of turns each variable into its lexical address</span>}
               </div>
               {view === 'trace' && <TracePanel trace={trace} position={position} smooth={motion.current === 'step'} onPick={setPosition} />}
               {view === 'contour' && scopes && (
                 <ContourView
-                  program={studentProgram!}
+                  program={contourProgram!}
                   scopes={scopes}
                   keywords={language.grammar.keywords}
                   selected={contourSelection}

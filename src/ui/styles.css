@@ -17,6 +17,12 @@
   --selection: #d7e3f4;
   --serif: 'Source Serif 4', Georgia, serif;
   --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  /* Contour boxes, by nesting level: muted inks, none of them the accent blue, the
+     highlighter or the error red. At least 4.5:1 on paper and sheet. */
+  --contour-0: #2e7d6f;
+  --contour-1: #9a6a10;
+  --contour-2: #8a4f7d;
+  --contour-3: #5f7a2a;
 }
 
 /* Dark: the same book at night. Dark paper, light ink, an amber highlighter
@@ -24,6 +30,10 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
+    --contour-0: #5aa596;
+    --contour-1: #c2944a;
+    --contour-2: #b783a9;
+    --contour-3: #93a862;
     --paper: #1b1a18;
     --sheet: #23221f;
     --ink: #e9e5dc;
@@ -42,6 +52,10 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
+  --contour-0: #5aa596;
+  --contour-1: #c2944a;
+  --contour-2: #b783a9;
+  --contour-3: #93a862;
   --paper: #1b1a18;
   --sheet: #23221f;
   --ink: #e9e5dc;
@@ -863,7 +877,23 @@ input {
 .contour {
   fill: none;
   stroke: var(--rule-muted);
-  stroke-width: 1.2;
+  stroke-width: 1.4;
+}
+
+.contour.level-0 {
+  stroke: var(--contour-0);
+}
+
+.contour.level-1 {
+  stroke: var(--contour-1);
+}
+
+.contour.level-2 {
+  stroke: var(--contour-2);
+}
+
+.contour.level-3 {
+  stroke: var(--contour-3);
 }
 
 .contour.crossed {
@@ -898,8 +928,10 @@ input {
   cursor: pointer;
 }
 
+/* The button lies over the variable's text, so it is outlined, never filled. */
 .contour-ref:hover {
-  background: var(--hover);
+  outline: 1px solid var(--rule-muted);
+  outline-offset: -1px;
 }
 
 .contour-depth {
