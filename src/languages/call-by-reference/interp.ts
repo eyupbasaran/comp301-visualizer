@@ -10,10 +10,10 @@
 // exp1 exp2, assign-exp has x e); the AST keeps the names the other languages
 // use, so a node looks the same in every language.
 
-import type { Program } from '../../core/ast';
+import type { AstNode, Program } from '../../core/ast';
 import type { Env } from '../../core/env';
 import { pairOps } from '../../core/pairvals';
-import { record, type RunOptions, type Trace } from '../../core/trace';
+import { record, type Recorder, type RunOptions, type Trace } from '../../core/trace';
 import {
   boolVal,
   expvalToBool,
@@ -30,8 +30,15 @@ import {
 import { applyEnv, initEnv } from './environments';
 import type { AProgram, Expression } from './lang';
 
+/** The clause for an expression this language does not have: an Extend exercise's model answer. */
+export type Extension = (
+  exp: AstNode,
+  env: Env,
+  ops: { valueOf(exp: AstNode, env: Env): ExpVal; valueOfOperand(exp: AstNode, env: Env): Ref; rec: Recorder },
+) => ExpVal;
+
 // value-of-program : Program -> ExpVal
-export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Trace {
+export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions, extension?: Extension): Trace {
   return record(pgm, options, (rec) => {
     // Only ExpVals are ever stored in this language.
     const deref = (ref: number) => rec.store.deref(ref) as ExpVal;
@@ -136,6 +143,13 @@ export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Tr
           setright(p, v2);
           return numVal(83n);
         }
+
+        default:
+          return extension!(exp as AstNode, env, {
+            valueOf: (e, en) => valueOf(e as Expression, en),
+            valueOfOperand: (e, en) => valueOfOperand(e as Expression, en),
+            rec,
+          });
       }
     }
 

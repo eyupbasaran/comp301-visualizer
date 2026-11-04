@@ -1,15 +1,18 @@
 // Port of chapter3/let-lang/interp.scm. Same clauses, same evaluation order.
 // Each value-of call is one step: rec.valueOf when it starts, rec.returns when it returns.
 
-import type { Program } from '../../core/ast';
+import type { AstNode, Program } from '../../core/ast';
 import type { Env } from '../../core/env';
-import { record, type RunOptions, type Trace } from '../../core/trace';
+import { record, type Recorder, type RunOptions, type Trace } from '../../core/trace';
 import { boolVal, expvalToBool, expvalToNum, numVal, type ExpVal } from '../../core/values';
 import { applyEnv, initEnv } from './environments';
 import type { AProgram, Expression } from './lang';
 
+/** The clause for an expression LET does not have: an Extend exercise's model answer. */
+export type Extension = (exp: AstNode, env: Env, ops: { valueOf(exp: AstNode, env: Env): ExpVal; rec: Recorder }) => ExpVal;
+
 // value-of-program : Program -> ExpVal
-export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Trace {
+export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions, extension?: Extension): Trace {
   return record(pgm, options, (rec) => {
     // value-of : Exp * Env -> ExpVal
     function valueOf(exp: Expression, env: Env): ExpVal {
@@ -50,6 +53,9 @@ export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Tr
           const val1 = valueOf(exp.exp1, env);
           return valueOf(exp.body, rec.extendEnv(exp.var, val1, env));
         }
+
+        default:
+          return extension!(exp as AstNode, env, { valueOf: (e, en) => valueOf(e as Expression, en), rec });
       }
     }
 

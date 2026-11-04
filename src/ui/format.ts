@@ -4,8 +4,9 @@
 import { sourceOf, type AstNode } from '../core/ast';
 import type { Env, Frame } from '../core/env';
 import { frameBinding, framesOf } from '../core/env';
+import type { RunResult } from '../core/language';
 import type { StoreEvent } from '../core/store';
-import type { Step, Trace, ValueOfStep } from '../core/trace';
+import type { Outcome, Step, Trace, ValueOfStep } from '../core/trace';
 import type { DenVal, ExpVal, StoreVal } from '../core/values';
 
 interface FrameNames {
@@ -526,4 +527,12 @@ function explainLookup(trace: Trace, step: ValueOfStep, name: string): string {
     skipped.push(here);
   }
   return `${name} is not bound in any frame, so apply-env reports an error.`;
+}
+
+/** The top bar's one-line result: "12 steps · value 3", "parse error". */
+export function summary(result: RunResult): string {
+  if (!result.ok) return 'parse error';
+  const steps = `${result.trace.steps.length} steps`;
+  const outcome: Outcome = result.trace.outcome;
+  return outcome.kind === 'value' ? `${steps} · value ${bookValue(outcome.value)}` : `${steps} · ${outcome.kind}`;
 }

@@ -72,6 +72,23 @@ source ──parse──▶ AST ──run──▶ Trace ──stateAt(trace, po
    - Every language with an official folder already has its list (converted with `scripts/official-tests.mjs`). CALL-BY-NAME and TRAMPOLINED have no official folder.
 6. Add examples to the module.
 
+## Compare mode (`src/compare/`, `src/ui/compare/`)
+
+- `src/eopl3/<origin>/*.scm`: the official `lang`, `interp`, `data-structures`, `environments` (plus `store`, `translator`, `pairval*` where the folder has them), vendored unchanged at the commit in `src/eopl3/SOURCE`.
+- `sources.ts`: the files of two languages, matched by name. Scheme when both have an official folder, our TS ports for both otherwise.
+- `diff.ts`: LCS line diff of the code only (comments and whitespace ignored; a comment-only line on one side is a `quiet` row, never a change) and folding of unchanged runs.
+- `grammarDiff.ts`: productions added, removed or changed, by variant, from each module's `grammar`.
+- `comparisons.ts`: the only pairs the picker offers. Each has a summary, notes anchored to a piece of a changed line of code, and `runBoth` (one program that differs in value or in a `Measure`) and/or `twoWays` (the same task in each language). A side can run one language and show another's code (`codeOf`: CALL-BY-VALUE runs IMPLICIT-REFS but shows mutable-pairs, the folder call-by-reference and call-by-need are built on). `tests/compare/comparisons.test.ts` fails if an anchor no longer matches, a program stops parsing, or a run-in-both program stops showing a difference.
+- The page is loaded with `React.lazy`, so the vendored code is only downloaded when Compare is opened.
+
+## Extend mode (`src/extend/`, `src/ui/extend/`)
+
+- `grammarText.ts`: reads what the student writes. (a) in the book's notation (`Expression ::= …`, `{…}*`, `{…}*(sep)`) or SLLGEN; (b) `name-exp (f1 f2 …)`; (c) `(name-exp (f1 pred?) …)`. `checkAbstract` and `checkDatatype` compare (b) and (c) with (a): one field per Expression, Identifier and Number, in order, `(list-of …)` inside a repeat. `toProduction` turns (a) into a `Production`, with the field names of (b) when it is right.
+- `extend.ts`: `extendGrammar` adds the production to the base grammar (a `GrammarError` says why it doesn't fit), `extendLanguage` makes the `LanguageModule`, `clauseOf` takes a `cases` clause out of a vendored `interp.scm`.
+- `exercises.ts`: each exercise has its question, examples with expected values, the model answer for (a)–(e), a checklist, the related official clauses, and `run`: the model implementation, passed to the base interpreter as its extension.
+- The LET, CALL-BY-REFERENCE and CPS interpreters take an optional last argument, `extension`, used only in the `default:` branch of their `cases`. CPS's has a `valueOfK` and an `applyCont`, so an exercise can add continuations.
+- To add an exercise: write its entry in `EXERCISES`. If its base has no `extension` yet, add one the same way. `tests/extend/exercises.test.ts` checks that the model (b)/(c) pass the checkers, the grammar is LL(1) with its base, every example runs to its expected value, and every related clause is found.
+
 ## Lecture cases (`tests/lecture-cases.json`)
 
 - One entry per program and language: `id`, `lang`, `program`, `from` (lecture), and what to check: `value`, `steps`, `error`, `diverges`, `translation`.
