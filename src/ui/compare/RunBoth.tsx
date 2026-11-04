@@ -25,10 +25,12 @@ interface Props {
   /** What to look for. */
   look: string;
   measure?: Measure;
+  /** The button's text, when it is not "Run in both" / "Run both". */
+  runLabel?: string;
   onOpen(module: LanguageModule, source: string): void;
 }
 
-export function RunBoth({ sides, sources, look, measure, onOpen }: Props) {
+export function RunBoth({ sides, sources, look, measure, runLabel, onOpen }: Props) {
   const [edited, setEdited] = useState(sources);
   const [ran, setRan] = useState(sources);
   const shared = sources.length === 1;
@@ -93,7 +95,7 @@ export function RunBoth({ sides, sources, look, measure, onOpen }: Props) {
       )}
       <div className="run-both-actions">
         <button type="button" className="run" onClick={run} title="Run (Ctrl+Enter)">
-          {shared ? 'Run in both' : 'Run both'}
+          {runLabel ?? (shared ? 'Run in both' : 'Run both')}
         </button>
         {stale && <span className="step-note">The program changed. Run it again to update the results.</span>}
       </div>

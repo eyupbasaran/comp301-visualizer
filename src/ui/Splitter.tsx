@@ -79,3 +79,22 @@ export function useStoredSize(key: string, initial: number): [number, (value: nu
   }, [key, value]);
   return [value, setValue];
 }
+
+/** Text the viewer typed, kept in this browser only. Falls back quietly where storage is blocked. */
+export function useStoredText(key: string, initial: string): [string, (value: string) => void] {
+  const [value, setValue] = useState(() => {
+    try {
+      return window.localStorage.getItem(key) ?? initial;
+    } catch {
+      return initial;
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch {
+      // Private window or blocked storage: the text just isn't remembered.
+    }
+  }, [key, value]);
+  return [value, setValue];
+}
