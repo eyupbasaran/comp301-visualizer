@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "racket-check": "node scripts/racket-check/check.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",

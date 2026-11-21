@@ -16,3 +16,8 @@ Thumbs.db
 
 # Local Claude Code settings
 .claude/
+
+# Racket check: the official code, its patched copies, and run output (see scripts/racket-check)
+scripts/racket-check/.eopl3/
+scripts/racket-check/langs/
+scripts/racket-check/out/
