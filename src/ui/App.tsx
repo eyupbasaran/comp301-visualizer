@@ -166,7 +166,7 @@ export default function App() {
   return (
     <div className="app" data-motion={motion.current}>
       <header className="topbar">
-        <h1 className="brand">Schema</h1>
+        <h1 className="brand">vis301</h1>
         <div className="controls">
           <div className="field">
             <label htmlFor="language">Language</label>

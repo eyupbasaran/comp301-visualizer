@@ -1,4 +1,4 @@
-# Schema
+# vis301
 
 Step through the EOPL languages of COMP301 and see the environment, store and continuation at each step.
 
