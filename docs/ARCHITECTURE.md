@@ -95,6 +95,13 @@ source ──parse──▶ AST ──run──▶ Trace ──stateAt(trace, po
 - `computed: true` means the value is not on the slides; it was worked out by hand, then checked against the official code in Racket.
 - `steps` counts `value-of` calls (`value-of/k` and `apply-cont` calls in CPS). Every count matches the official code run in Racket with a step counter.
 
+## Racket check (`npm run racket-check`)
+
+- Runs every known program (picker examples, official tests, lecture cases, Compare examples) in the official interpreters and in ours, and compares the outcome, the step count, and at every step what the step sees: the expression, the environment, the store and, in CPS, the continuation. The first 2,000 steps of each run are compared.
+- `scripts/racket-check/prepare.mjs` copies the official folders and adds one call per step, `(step! 'value-of exp env)` (`value-of/k` and `apply-cont` in CPS). `steps.rkt` prints each part canonically (a datatype record as `(variant field ...)`) and keeps its SHA-1; `tests/racket/canon.ts` prints ours the same way, following each folder's environment representation (lists in LET and PROC, a list of values in NAMELESS, the datatype elsewhere).
+- CALL-BY-NAME is checked against `call-by-need` without the memoizing `setref!`, TRAMPOLINED against CPS, and the pairval1 languages with `pairvals.scm` switched to `pairval1.scm`.
+- Needs Racket with the eopl package, and the official code at the commit in `src/eopl3/SOURCE` cloned to `scripts/racket-check/.eopl3` (gitignored). The test is skipped otherwise, so CI does not run it. The report is `scripts/racket-check/out/report.txt`; with `RACKET_CHECK_FULL=1` the steps are kept as text, to read a difference.
+
 ## Commands
 
 ```
@@ -103,6 +110,7 @@ npm run dev        # dev server
 npm test           # all tests
 npm run typecheck
 npm run build
+npm run racket-check   # step-by-step against the official code (needs Racket)
 ```
 
 Cloudflare Workers Builds runs `npm run build` on every push (Node version from `.node-version`) and serves `dist` as `wrangler.jsonc` says: a merge to `main` goes live (`wrangler deploy`), any other branch gets a preview (`wrangler preview`). The tests run in GitHub Actions (`.github/workflows/ci.yml`), not on Cloudflare.
