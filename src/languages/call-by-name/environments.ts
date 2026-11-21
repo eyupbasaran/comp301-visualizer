@@ -34,6 +34,6 @@ export function applyEnv(rec: Recorder, env: Env, searchVar: string): Ref {
         : applyEnv(rec, env.savedEnv, searchVar);
     }
     default:
-      throw new Error(`apply-env: CALL-BY-NAME has no ${env.kind} frames`);
+      throw new Error(`apply-env: no ${env.kind} frames in this language`);
   }
 }

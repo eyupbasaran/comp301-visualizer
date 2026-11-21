@@ -35,7 +35,28 @@ export function schemeFiles(module: LanguageModule): Map<string, string> {
 function portFiles(module: LanguageModule): Map<string, string> {
   const files = filesIn(ports, `../languages/${module.id}/`);
   files.delete('index.ts');
-  return files;
+  // A file the port imports from another language's folder is its file too: TRAMPOLINED uses CPS's continuations.
+  for (const text of [...files.values()]) {
+    for (const [, language, name] of text.matchAll(/from '\.\.\/([a-z-]+)\/([a-z-]+)'/g)) {
+      const borrowed = ports[`../languages/${language}/${name}.ts`];
+      if (borrowed !== undefined && !files.has(`${name}.ts`)) files.set(`${name}.ts`, borrowed);
+    }
+  }
+  return new Map([...files].map(([name, text]) => [name, withoutExtendMode(text)]));
+}
+
+/** The port without its "#region Extend mode" blocks: Extend's hooks, which are not part of the language. */
+export function withoutExtendMode(text: string): string {
+  let inside = false;
+  return text
+    .split('\n')
+    .filter((line) => {
+      if (/^\s*\/\/ #region Extend mode/.test(line)) inside = true;
+      else if (inside && /^\s*\/\/ #endregion/.test(line)) inside = false;
+      else return !inside;
+      return false;
+    })
+    .join('\n');
 }
 
 function rank(name: string): number {

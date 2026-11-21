@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { changedLines, diffLines } from '../../src/compare/diff';
 import { schemeFiles, sourcesFor } from '../../src/compare/sources';
 import { LANGUAGES, languageById } from '../../src/languages';
 
@@ -26,6 +27,25 @@ describe('sourcesFor', () => {
     expect(s.kind).toBe('ts');
     expect(s.files.every((f) => f.name.endsWith('.ts'))).toBe(true);
     expect(s.files.some((f) => f.name === 'index.ts')).toBe(false);
+  });
+
+  it("leaves Extend mode's hooks out of the ports it compares", () => {
+    for (const [a, b] of [
+      ['call-by-reference', 'call-by-name'],
+      ['cps', 'trampolined'],
+    ] as const) {
+      const s = sourcesFor(languageById(a)!.module!, languageById(b)!.module!);
+      const changed = s.files.flatMap((f) => changedLines(diffLines(f.a ?? '', f.b ?? '', s.kind)));
+      expect(changed.filter((line) => /extension|Extension|#region|#endregion/.test(line))).toEqual([]);
+    }
+  });
+
+  it('counts a file a port imports from another language as its own: TRAMPOLINED uses CPS continuations', () => {
+    const s = sourcesFor(languageById('cps')!.module!, languageById('trampolined')!.module!);
+    const continuations = s.files.find((f) => f.name === 'continuations.ts')!;
+    expect(continuations.b).toBe(continuations.a);
+    // Only interp.ts differs: the environments differ in nothing but comments.
+    expect(s.files.filter((f) => changedLines(diffLines(f.a ?? '', f.b ?? '', s.kind)).length > 0).map((f) => f.name)).toEqual(['interp.ts']);
   });
 
   it('compares only the pair files of two implementations of one language', () => {

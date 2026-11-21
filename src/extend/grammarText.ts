@@ -74,10 +74,12 @@ function bnfTokens(text: string): BnfToken[] {
       if (text[i] !== '*') throw new ReadError('A } must be followed by * : {…}* means zero or more times', at);
       i++;
       let separator: string | null = null;
-      // {…}*(,) : a separated list.
-      if (text[i] === '(' && text.indexOf(')', i + 2) !== -1) {
-        const end = text.indexOf(')', i + 2);
-        separator = text.slice(i + 1, end).trim();
+      // {…}*(,) : a separated list. A nonterminal in the parentheses is not a separator:
+      // {Identifier}*(Expression) is a repeat followed by ( Expression ).
+      const end = text[i] === '(' ? text.indexOf(')', i + 2) : -1;
+      const inside = end === -1 ? '' : text.slice(i + 1, end).trim();
+      if (/^\S+$/.test(inside) && !/^[A-Z][a-z]/.test(inside)) {
+        separator = inside;
         i = end + 1;
       }
       tokens.push({ t: 'close', separator, at });

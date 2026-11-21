@@ -6,11 +6,11 @@
 import type { AstNode } from '../core/ast';
 import { EoplError } from '../core/errors';
 import type { LanguageId, LanguageModule } from '../core/language';
-import type { Cont } from '../core/trace';
+import type { Cont, RunOptions } from '../core/trace';
 import { expvalToBool, expvalToNum, numVal } from '../core/values';
-import { valueOfProgram as callByReference } from '../languages/call-by-reference/interp';
-import { valueOfProgram as cps } from '../languages/cps/interp';
-import { valueOfProgram as letLang } from '../languages/let/interp';
+import { valueOfProgram as callByReference, type Extension as CallByReferenceExtension } from '../languages/call-by-reference/interp';
+import { valueOfProgram as cps, type Extension as CpsExtension } from '../languages/cps/interp';
+import { valueOfProgram as letLang, type Extension as LetExtension } from '../languages/let/interp';
 import { languageById } from '../languages';
 import { extendLanguage } from './extend';
 import { readAbstract, readEntry, toProduction } from './grammarText';
@@ -48,6 +48,8 @@ export interface Exercise {
 const fields = (x: AstNode | Cont) => x as unknown as Record<string, never>;
 type Frame = Cont & Record<string, unknown>;
 const lists = (x: AstNode) => x as unknown as Record<string, never[]>;
+// The run's options, with the model answer as the base interpreter's extension.
+const withExtension = <E>(options: RunOptions | undefined, extension: E): RunOptions => ({ ...options, extension });
 
 export const EXERCISES: readonly Exercise[] = [
   {
@@ -89,13 +91,13 @@ export const EXERCISES: readonly Exercise[] = [
       'The test must be a boolean: expval->bool reports an error otherwise.',
     ],
     run: (program, options) =>
-      letLang(program as never, options, (exp, env, { valueOf, rec }) => {
+      letLang(program as never, withExtension<LetExtension>(options, (exp, env, { valueOf, rec }) => {
         const f = fields(exp);
         const val = valueOf(f.exp3, env);
         return expvalToBool(val)
           ? valueOf(f.body1, rec.extendEnv(f.var, valueOf(f.exp1, env), env))
           : valueOf(f.body2, rec.extendEnv(f.var, valueOf(f.exp2, env), env));
-      }),
+      })),
   },
   {
     id: 'minus',
@@ -122,7 +124,7 @@ export const EXERCISES: readonly Exercise[] = [
       'A non-number operand is an error, reported by expval->num.',
     ],
     run: (program, options) =>
-      letLang(program as never, options, (exp, env, { valueOf }) => numVal(-expvalToNum(valueOf(fields(exp).exp1, env)))),
+      letLang(program as never, withExtension<LetExtension>(options, (exp, env, { valueOf }) => numVal(-expvalToNum(valueOf(fields(exp).exp1, env))))),
   },
   {
     id: 'cond',
@@ -172,11 +174,11 @@ export const EXERCISES: readonly Exercise[] = [
       'A list needs a helper that walks it: value-of-cond.',
     ],
     run: (program, options) =>
-      letLang(program as never, options, (exp, env, { valueOf }) => {
+      letLang(program as never, withExtension<LetExtension>(options, (exp, env, { valueOf }) => {
         const { conds, acts } = lists(exp);
         for (let i = 0; i < conds.length; i++) if (expvalToBool(valueOf(conds[i], env))) return valueOf(acts[i], env);
         throw new EoplError('value-of-cond', 'No condition got satisfied');
-      }),
+      })),
   },
   {
     id: 'let*',
@@ -215,13 +217,13 @@ export const EXERCISES: readonly Exercise[] = [
       'Zero bindings is allowed: the body runs in ρ.',
     ],
     run: (program, options) =>
-      letLang(program as never, options, (exp, env, { valueOf, rec }) => {
+      letLang(program as never, withExtension<LetExtension>(options, (exp, env, { valueOf, rec }) => {
         const { vars, exps } = lists(exp);
         const { body } = fields(exp);
         let e = env;
         for (let i = 0; i < vars.length; i++) e = rec.extendEnv(vars[i], valueOf(exps[i], e), e);
         return valueOf(body, e);
-      }),
+      })),
   },
   {
     id: 'letref',
@@ -252,10 +254,10 @@ export const EXERCISES: readonly Exercise[] = [
       'value-of-operand already makes this decision: reuse it.',
     ],
     run: (program, options) =>
-      callByReference(program as never, options, (exp, env, { valueOf, valueOfOperand, rec }) => {
+      callByReference(program as never, withExtension<CallByReferenceExtension>(options, (exp, env, { valueOf, valueOfOperand, rec }) => {
         const f = fields(exp);
         return valueOf(f.body, rec.extendEnv(f.var, valueOfOperand(f.exp1, env), env));
-      }),
+      })),
   },
   {
     id: 'let2',
@@ -307,7 +309,7 @@ export const EXERCISES: readonly Exercise[] = [
       'exp2 is evaluated in the saved env, not in one that already has var1.',
     ],
     run: (program, options) =>
-      cps(program as never, options, {
+      cps(program as never, withExtension<CpsExtension>(options, {
         valueOfK: (exp, env, cont, { valueOfK, rec }) => {
           const f = fields(exp);
           return valueOfK(f.exp1, env, rec.cont<Frame>({ kind: 'let2-exp1-cont', var1: f.var1, var2: f.var2, exp2: f.exp2, body: f.body, savedEnv: env, savedCont: cont }));
@@ -319,7 +321,7 @@ export const EXERCISES: readonly Exercise[] = [
           }
           return valueOfK(k.body, rec.extendEnv(k.var2, val, rec.extendEnv(k.var1, k.val1, k.savedEnv)), k.savedCont);
         },
-      }),
+      })),
   },
 ];
 

@@ -26,6 +26,6 @@ export function applyEnv(rec: Recorder, env: Env, searchSym: string): ExpVal {
       return n !== -1 ? procVal(rec.procedure(env.bVars[n], env.pBodies[n], env)) : applyEnv(rec, env.savedEnv, searchSym);
     }
     default:
-      throw new Error(`apply-env: EXPLICIT-REFS has no ${env.kind} frames`);
+      throw new Error(`apply-env: no ${env.kind} frames in this language`);
   }
 }

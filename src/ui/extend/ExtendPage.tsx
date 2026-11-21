@@ -76,6 +76,8 @@ function ExercisePanel({ exercise, onOpen }: { exercise: Exercise; onOpen: Props
   const [pick, setPick] = useState(0);
   const base = baseOf(exercise);
   const model = useMemo(() => modelLanguage(exercise), [exercise]);
+  // Kept between renders, so typing an answer doesn't run the example again.
+  const sides = useMemo(() => [{ name: `${base.name} + ${exercise.id}`, module: model }], [base, exercise, model]);
 
   const entry = useMemo(() => (a.trim() ? attempt(() => readEntry(a)) : null), [a]);
   const abstract = useMemo(() => (b.trim() ? attempt(() => readAbstract(b)) : null), [b]);
@@ -237,7 +239,7 @@ function ExercisePanel({ exercise, onOpen }: { exercise: Exercise; onOpen: Props
         </div>
         <RunBoth
           key={pick}
-          sides={[{ name: `${base.name} + ${exercise.id}`, module: model }]}
+          sides={sides}
           sources={[exercise.examples[pick].source]}
           look={exercise.examples.map((ex, i) => `Example ${i + 1}: ${ex.value === 'error' ? 'an error' : ex.value}${ex.note ? ` (${ex.note})` : ''}.`).join(' ')}
           runLabel="Run"

@@ -45,6 +45,12 @@ describe('readEntry', () => {
     expect(printBnf(readEntry('Expression ::= list ({Expression}*(,))'))).toBe('Expression ::= list ( {Expression}*(,) )');
   });
 
+  it('reads a nonterminal in ( ) right after }* as code, not as a separator', () => {
+    const spaced = printBnf(readEntry('Expression ::= foo {Identifier}* (Expression)'));
+    expect(spaced).toBe('Expression ::= foo {Identifier}* ( Expression )');
+    expect(printBnf(readEntry('Expression ::= foo {Identifier}*(Expression)'))).toBe(spaced);
+  });
+
   it('names fields var, exp1, exp2, … until (b) names them', () => {
     expect(defaultNames(slotsOf(readEntry(LET_IF_BNF)))).toEqual(['var', 'exp1', 'exp2', 'exp3', 'exp4', 'exp5']);
   });

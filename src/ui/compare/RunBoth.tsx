@@ -57,7 +57,7 @@ export function RunBoth({ sides, sources, look, measure, runLabel, onOpen }: Pro
   const card = (side: Side, i: number) => {
     const result = results[i];
     return (
-      <div className="run-both-card">
+      <div key={side.name} className="run-both-card">
         <div className="panel-head">
           <h3>{side.name}</h3>
           <button type="button" className="link-button" onClick={() => onOpen(side.module, sourceOf(ran, i))}>

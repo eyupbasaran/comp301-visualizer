@@ -104,6 +104,17 @@ export interface RunOptions {
   stepLimit?: number;
   /** Stop when value-of calls nest this deep. The browser's stack is far smaller than Racket's. */
   depthLimit?: number;
+  /**
+   * Extend mode: the clause for an expression the language does not have, of the base
+   * interpreter's `Extension` type. Only the LET, CALL-BY-REFERENCE and CPS interpreters take one.
+   */
+  extension?: unknown;
+}
+
+/** Extend mode: the extension a run was given. Only an Extend language's programs reach the clause that asks for it. */
+export function extensionOf<E>(options: RunOptions | undefined): E {
+  if (options?.extension === undefined) throw new Error('value-of: this language has no clause for this expression');
+  return options.extension as E;
 }
 
 export const DEFAULT_STEP_LIMIT = 100_000;

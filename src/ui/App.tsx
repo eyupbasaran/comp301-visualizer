@@ -27,6 +27,8 @@ import { TranslationView } from './TranslationView';
 const ComparePage = lazy(() => import('./compare/ComparePage'));
 const ExtendPage = lazy(() => import('./extend/ExtendPage'));
 const MODES = { explore: 'Explore', compare: 'Compare', extend: 'Extend' } as const;
+// The language picker's value for a language from Extend mode.
+const EXTENDED = 'extended';
 
 const START = { language: 'proc', example: 2 };
 const PROGRAM_WIDTH = 460;
@@ -183,18 +185,21 @@ export default function App() {
             <>
               <div className="field">
                 <label htmlFor="language">Language</label>
-                <select id="language" className="mono" value={language.id} onChange={(e) => pickLanguage(e.target.value)}>
+                <select
+                  id="language"
+                  className="mono"
+                  title={extension ? language.variant?.description : undefined}
+                  value={extension ? EXTENDED : language.id}
+                  onChange={(e) => pickLanguage(e.target.value)}
+                >
+                  {/* Its own entry, so that picking the base language goes back to it. */}
+                  {extension && <option value={EXTENDED}>{`${language.name} + ${language.variant?.id}`}</option>}
                   {LANGUAGES.map((entry) => (
                     <option key={entry.id} value={entry.id} disabled={!entry.module}>
                       {entry.module ? entry.name : `${entry.name} (soon)`}
                     </option>
                   ))}
                 </select>
-                {extension && (
-                  <span className="badge extension-badge" title={language.variant?.description}>
-                    + {language.variant?.id}
-                  </span>
-                )}
                 {variants && (
                   <select
                     className="mono"

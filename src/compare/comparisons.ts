@@ -187,7 +187,7 @@ export const COMPARISONS: readonly Comparison[] = [
       },
       {
         title: 'Book Ex. 3.25: makerec, recursion for any procedure',
-        task: 'times4(3) = 12 again, with the trick made general: makerec turns any maketimes4-style procedure into a recursive one. This is the Y combinator; letrec does the same job in the interpreter.',
+        task: 'times4(3) = 12 again, with the trick made general: makerec turns any maketimes4-style procedure into a recursive one. This is the Y combinator in the form that works under call-by-value: the extra proc (z) holds off (x x) until it is called. letrec does the same job in the interpreter.',
         from: 'let makerec = proc (f)\n                let d = proc (x)\n                          proc (z) ((f (x x)) z)\n                in proc (n) ((f (d d)) n)\nin let maketimes4 = proc (f)\n                     proc (x)\n                       if zero?(x)\n                       then 0\n                       else -((f -(x,1)), -4)\n   in let times4 = (makerec maketimes4)\n      in (times4 3)',
         to: TIMES4,
       },
@@ -280,7 +280,7 @@ export const COMPARISONS: readonly Comparison[] = [
         to: EVEN_ODD_EXPLICIT,
       },
       {
-        title: 'Book Ex. 4.16: recursion without letrec',
+        title: 'Ours, after Book Ex. 4.16: recursion without letrec',
         task: 'times4(3) = 12. EXPLICIT-REFS can make a procedure recursive without letrec: it calls whatever is in a location, and the location is set to the procedure itself.',
         from: TIMES4,
         to: 'let times4 = newref(0)\nin begin\n     setref(times4, proc (x)\n                      if zero?(x)\n                      then 0\n                      else -((deref(times4) -(x,1)), -4));\n     (deref(times4) 3)\n   end',
@@ -304,7 +304,7 @@ export const COMPARISONS: readonly Comparison[] = [
       },
       {
         anchor: '(assign-exp (var exp1)',
-        text: 'set changes the location a variable is bound to. newref, deref and setref are gone from the language: the store is implicit.',
+        text: 'set puts a new value in the location the variable is bound to; the variable stays bound to the same location. newref, deref and setref are gone from the language: the store is implicit.',
       },
       {
         anchor: '(bval reference?)',
@@ -656,13 +656,13 @@ export const COMPARISONS: readonly Comparison[] = [
         look: 'Same value. (loop -(n,1)) is a tail call: the CPS interpreter calls it with the same continuation, so the control context stays small. The LETREC interpreter nests one more value-of for every call.',
       },
       {
-        title: 'Book Ex. 5.14: a sum, recursive',
+        title: 'Ours, after Book Ex. 5.14: a sum, recursive',
         source: SUM,
         measure: 'control',
         look: 'Same value. The recursive call is an operand of -(…, …), so its value is awaited: the continuation grows by one frame per call in CPS too. The LETREC interpreter nests several value-of calls for each pending call, so its number grows faster.',
       },
       {
-        title: 'Book Ex. 5.14: a sum, with an accumulator',
+        title: 'Ours, after Book Ex. 5.14: a sum, with an accumulator',
         source: SUM_ITER,
         measure: 'control',
         look: 'Same value, and the same sum as the recursive one, but every call is a tail call: the continuation stays the same size however large n is. Try n = 20 in both.',
