@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { Program } from '../../src/core/ast';
 import { letLanguage } from '../../src/languages/let';
 import { procLanguage } from '../../src/languages/proc';
-import { analyzeScopes, CHAR, colX, contourPath, contourRows, linesOf, position } from '../../src/ui/contours';
+import { implicitRefsLanguage } from '../../src/languages/implicit-refs';
+import { letrecLanguage } from '../../src/languages/letrec';
+import { analyzeScopes, CHAR, colX, contourBox, contourPath, contourRows, linesOf, position } from '../../src/ui/contours';
 import { describeReference } from '../../src/ui/ContourView';
 
 const depths = (program: Program) => analyzeScopes(program).references.map((r) => `${r.name}:${r.depth}`);
@@ -88,5 +90,41 @@ describe('contours', () => {
     expect(d.endsWith(' Z')).toBe(true);
     // Two lines: four points on the right side, four on the left.
     expect(d.split(' L ').length).toBe(8);
+  });
+
+  it('draws a contour as a rectangle, as the book does, nested ones inside their parents', () => {
+    const sources = [
+      'let x = 200\nin let f = proc (z) -(z,x)\n   in let x = 100\n      in let g = proc (z) -(z,x)\n         in -((f 1), (g 1))',
+      'let x = 37 in proc (y) let z = -(y,x) in -(x,y)',
+    ];
+    for (const source of sources) {
+      const lines = linesOf(source);
+      const { contours } = analyzeScopes(procLanguage.parse(source));
+      const maxLevel = Math.max(...contours.map((c) => c.level));
+      const boxes = contours.map((c) => contourBox(lines, c.region, c.owner, c.level, maxLevel));
+      expect(boxes.every((b) => b !== null)).toBe(true);
+      contours.forEach((c, i) => {
+        if (c.parent === null) return;
+        const [child, parent] = [boxes[i]!, boxes[c.parent]!];
+        expect(child.left > parent.left && child.right < parent.right && child.top > parent.top && child.bottom < parent.bottom).toBe(true);
+      });
+    }
+  });
+
+  it('gives every lecture-formatted example a rectangle, letrec heads included', () => {
+    for (const language of [procLanguage, letrecLanguage, implicitRefsLanguage]) {
+      for (const example of language.examples) {
+        const lines = linesOf(example.source);
+        const { contours } = analyzeScopes(language.parse(example.source));
+        const maxLevel = Math.max(0, ...contours.map((c) => c.level));
+        for (const c of contours) expect(contourBox(lines, c.region, c.owner, c.level, maxLevel), example.title).not.toBeNull();
+      }
+    }
+  });
+
+  it("never takes a let's right-hand side into its own variable's box: it outlines the text instead", () => {
+    const source = 'let x = 1 in -(x,\nlet y = 2 in -(y, x))';
+    const [outer] = analyzeScopes(letLanguage.parse(source)).contours;
+    expect(contourBox(linesOf(source), outer.region, outer.owner, 0, 1)).toBeNull();
   });
 });

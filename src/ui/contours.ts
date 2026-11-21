@@ -187,6 +187,80 @@ export function position(lines: readonly LineInfo[], offset: number): { line: nu
 export const textTop = (line: number) => PAD_Y + line * LINE;
 export const colX = (col: number) => PAD_X + col * CHAR;
 
+export interface ContourBox {
+  readonly left: number;
+  readonly right: number;
+  readonly top: number;
+  readonly bottom: number;
+}
+
+/**
+ * A contour as the book draws it: one rectangle around every line of its region,
+ * padded more for outer contours so nested boxes sit inside them.
+ *
+ * Where the region starts mid-line and the lines below start further left, the
+ * rectangle also takes in the text before the region on its first line. That is
+ * fine when the text is only the construct's head (`letrec even(dummy) =`,
+ * `proc (x)`), as in hand-drawn diagrams. Null when the rectangle would take in
+ * an expression the declaration does not cover (the right-hand side of a let),
+ * text from outside the construct, or half a word: contourPath outlines the text then.
+ */
+export function contourBox(lines: readonly LineInfo[], region: Span, owner: AstNode, level: number, maxLevel: number): ContourBox | null {
+  const a = position(lines, region.from);
+  const b = position(lines, region.to);
+  let left = a.col;
+  let right = b.line === a.line ? b.col : 0;
+  for (let l = a.line; l <= b.line; l++) {
+    const text = lines[l].text;
+    const from = l === a.line ? a.col : text.length - text.trimStart().length;
+    const to = l === b.line ? b.col : text.trimEnd().length;
+    if (to <= from) continue;
+    left = Math.min(left, from);
+    right = Math.max(right, to);
+  }
+  const first = lines[a.line];
+  const last = lines[b.line];
+  // The owner's own expressions that the declaration does not cover.
+  const outside = fieldsOf(owner)
+    .flatMap(([, v]) => (Array.isArray(v) ? v : [v]))
+    .filter((v): v is AstNode => isAstNode(v) && !contains(region, v.span))
+    .map((n) => n.span);
+  const takesIn = (from: number, to: number) => outside.some((sp) => sp.from < to && from < sp.to);
+  const head = first.text.slice(left, a.col);
+  if (
+    head.trim() &&
+    (first.start + left < owner.span.from || (left > 0 && !/\s/.test(first.text[left - 1])) || takesIn(first.start + left, region.from))
+  ) {
+    return null;
+  }
+  const tail = last.text.slice(b.col, right);
+  if (
+    tail.trim() &&
+    (last.start + right > owner.span.to || (right < last.text.length && !/\s/.test(last.text[right])) || takesIn(region.to, last.start + right))
+  ) {
+    return null;
+  }
+
+  const pad = padding(level, maxLevel);
+  return {
+    left: colX(left) - pad.left,
+    right: colX(right) + pad.right,
+    top: textTop(a.line) - 4 - pad.y,
+    bottom: textTop(b.line) + TEXT_H + 9 + pad.y,
+  };
+}
+
+/**
+ * How far a contour sits outside its text: further for outer ones, so nested
+ * contours that share an edge stay apart. On the left an edge must fit in the one
+ * space before the region ("in |let"), so it grows by at most a character; the
+ * right has room. The line below limits the bottom.
+ */
+export function padding(level: number, maxLevel: number): { left: number; right: number; y: number } {
+  const grow = maxLevel - level;
+  return { left: 2 + Math.min(grow, 2) * 3, right: 2 + Math.min(grow, 3) * 5, y: 2 + Math.min(grow, 3) };
+}
+
 /**
  * The outline of a contour: one band per source line, from where the region
  * starts on that line to where it ends, joined into one staircase polygon.
@@ -211,12 +285,7 @@ export interface ContourRow {
 export function contourRows(lines: readonly LineInfo[], region: Span, level: number, maxLevel: number): ContourRow[] {
   const a = position(lines, region.from);
   const b = position(lines, region.to);
-  // Outer contours sit a little further out, but never more than about one
-  // character: a region starts right after "in " or "(", and the box must not
-  // cut through the text before it.
-  const grow = Math.min(maxLevel - level, 3);
-  const px = 2 + grow * 2;
-  const py = 2 + grow;
+  const pad = padding(level, maxLevel);
   const rows: ContourRow[] = [];
   for (let l = a.line; l <= b.line; l++) {
     const text = lines[l].text;
@@ -228,10 +297,10 @@ export function contourRows(lines: readonly LineInfo[], region: Span, level: num
     const previous = rows[rows.length - 1];
     rows.push({
       line: l,
-      left: blank && previous ? previous.left : colX(startCol) - px,
-      right: blank && previous ? previous.right : colX(endCol) + px,
-      top: l === a.line ? textTop(l) - 4 - py : textTop(l) - 3,
-      bottom: l === b.line ? textTop(l) + TEXT_H + 9 + py : textTop(l + 1) - 3,
+      left: blank && previous ? previous.left : colX(startCol) - pad.left,
+      right: blank && previous ? previous.right : colX(endCol) + pad.right,
+      top: l === a.line ? textTop(l) - 4 - pad.y : textTop(l) - 3,
+      bottom: l === b.line ? textTop(l) + TEXT_H + 9 + pad.y : textTop(l + 1) - 3,
     });
   }
   return rows;
