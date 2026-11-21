@@ -8,6 +8,14 @@ import { boolVal, expvalToBool, expvalToNum, numVal, type ExpVal } from '../../c
 import { applyEnv, initEnv } from './environments';
 import type { AProgram, Expression } from './lang';
 
+// #region Extend mode (not part of the port; Compare leaves it out)
+import type { AstNode } from '../../core/ast';
+import { extensionOf, type Recorder } from '../../core/trace';
+
+/** The clause for an expression LET does not have: an Extend exercise's model answer, passed as options.extension. */
+export type Extension = (exp: AstNode, env: Env, ops: { valueOf(exp: AstNode, env: Env): ExpVal; rec: Recorder }) => ExpVal;
+// #endregion
+
 // value-of-program : Program -> ExpVal
 export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Trace {
   return record(pgm, options, (rec) => {
@@ -50,6 +58,13 @@ export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Tr
           const val1 = valueOf(exp.exp1, env);
           return valueOf(exp.body, rec.extendEnv(exp.var, val1, env));
         }
+
+        // #region Extend mode: an expression LET does not have.
+        default: {
+          const other: never = exp; // every variant of LET has its clause above
+          return extensionOf<Extension>(options)(other, env, { valueOf: (e, en) => valueOf(e as Expression, en), rec });
+        }
+        // #endregion
       }
     }
 

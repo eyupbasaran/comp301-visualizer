@@ -23,6 +23,6 @@ export function applyEnv(rec: Recorder, env: Env, searchSym: string): ExpVal {
       // env is this frame itself: that is what makes the recursion work.
       return env.pName === searchSym ? procVal(rec.procedure(env.bVar, env.pBody, env)) : applyEnv(rec, env.savedEnv, searchSym);
     default:
-      throw new Error(`apply-env: TRAMPOLINED has no ${env.kind} frames`);
+      throw new Error(`apply-env: no ${env.kind} frames in this language`);
   }
 }

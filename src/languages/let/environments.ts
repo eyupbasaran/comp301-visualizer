@@ -13,7 +13,7 @@ export function initEnv(rec: Recorder): Env {
 
 export function applyEnv(env: Env, searchSym: string): ExpVal {
   if (env.kind === 'empty-env') throw new EoplError('apply-env', `No binding for ${searchSym}`);
-  if (env.kind !== 'extend-env') throw new Error(`apply-env: LET has no ${env.kind} frames`);
+  if (env.kind !== 'extend-env') throw new Error(`apply-env: no ${env.kind} frames in this language`);
   // In LET every bound value is an ExpVal; a Ref (number) can't get here.
   return env.bvar === searchSym ? (env.bval as ExpVal) : applyEnv(env.savedEnv, searchSym);
 }

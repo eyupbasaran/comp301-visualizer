@@ -30,6 +30,18 @@ import {
 import { applyEnv, initEnv } from './environments';
 import type { AProgram, Expression } from './lang';
 
+// #region Extend mode (not part of the port; Compare leaves it out)
+import type { AstNode } from '../../core/ast';
+import { extensionOf, type Recorder } from '../../core/trace';
+
+/** The clause for an expression this language does not have: an Extend exercise's model answer, passed as options.extension. */
+export type Extension = (
+  exp: AstNode,
+  env: Env,
+  ops: { valueOf(exp: AstNode, env: Env): ExpVal; valueOfOperand(exp: AstNode, env: Env): Ref; rec: Recorder },
+) => ExpVal;
+// #endregion
+
 // value-of-program : Program -> ExpVal
 export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Trace {
   return record(pgm, options, (rec) => {
@@ -136,6 +148,17 @@ export function valueOfProgram(pgm: Program<AProgram>, options?: RunOptions): Tr
           setright(p, v2);
           return numVal(83n);
         }
+
+        // #region Extend mode: an expression CALL-BY-REFERENCE does not have.
+        default: {
+          const other: never = exp; // every variant of CALL-BY-REFERENCE has its clause above
+          return extensionOf<Extension>(options)(other, env, {
+            valueOf: (e, en) => valueOf(e as Expression, en),
+            valueOfOperand: (e, en) => valueOfOperand(e as Expression, en),
+            rec,
+          });
+        }
+        // #endregion
       }
     }
 
